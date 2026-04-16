@@ -1,0 +1,63 @@
+services:
+  web-backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"
+    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+    networks:
+      - mk-web
+      - mk-shared
+
+  web-frontend:
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file: .env
+    environment:
+      - API_URL=http://web-backend:8000
+    depends_on:
+      - web-backend
+    networks:
+      - mk-web
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - web-frontend
+      - web-backend
+    networks:
+      - mk-web
+
+  certbot:
+    image: certbot/certbot
+    restart: "no"
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    profiles:
+      - ssl
+    command: certonly --webroot -w /var/www/certbot --email ${CERTBOT_EMAIL:-admin@example.com} -d ${DOMAIN:-localhost} --agree-tos --non-interactive
+
+networks:
+  mk-web:
+    driver: bridge
+  mk-shared:
+    external: true
+    name: mk-logistic_mk-network
