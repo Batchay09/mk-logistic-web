@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.Column("phone", sa.String(), nullable=True),
         sa.Column("company_name", sa.String(), nullable=True),
         sa.Column("policy_accepted", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
         # Web auth fields
         sa.Column("email", sa.String(255), nullable=True, unique=True),
         sa.Column("password_hash", sa.String(255), nullable=True),
@@ -109,7 +109,7 @@ def upgrade() -> None:
         sa.Column("price_palletizing", sa.Numeric(10, 2), nullable=False, server_default="0"),
         sa.Column("total_amount", sa.Numeric(10, 2), nullable=False, server_default="0"),
         sa.Column("yookassa_payment_id", sa.String(255), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
     op.create_table(
@@ -118,7 +118,7 @@ def upgrade() -> None:
         sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id"), nullable=False),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
         sa.Column("status", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
     op.create_table(
@@ -126,7 +126,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id"), nullable=False),
         sa.Column("driver_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("assigned_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("assigned_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
     )
 
@@ -136,7 +136,7 @@ def upgrade() -> None:
         sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id"), nullable=False),
         sa.Column("driver_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("file_id", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
     op.create_table(
@@ -148,7 +148,7 @@ def upgrade() -> None:
         sa.Column("old_data", sa.JSON(), nullable=True),
         sa.Column("new_data", sa.JSON(), nullable=True),
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
 

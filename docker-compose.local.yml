@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mk_user
+      POSTGRES_PASSWORD: mk_pass
+      POSTGRES_DB: mk_logistic
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pg_data_local:/var/lib/postgresql/data
+    networks:
+      - mk-web
+
+  web-backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    env_file: .env.local
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      - db
+    networks:
+      - mk-web
+
+  web-frontend:
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8001
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env.local
+    environment:
+      - API_URL=http://web-backend:8000
+    depends_on:
+      - web-backend
+    networks:
+      - mk-web
+
+volumes:
+  pg_data_local:
+
+networks:
+  mk-web:
+    driver: bridge
