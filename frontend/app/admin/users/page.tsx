@@ -105,7 +105,7 @@ export default function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>Изменить роль — {editUser?.full_name || editUser?.email}</DialogTitle>
           </DialogHeader>
-          <Select value={newRole} onValueChange={setNewRole}>
+          <Select value={newRole} onValueChange={(v) => v && setNewRole(v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="client">Клиент</SelectItem>

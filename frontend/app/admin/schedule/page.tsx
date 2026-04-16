@@ -64,14 +64,14 @@ export default function AdminSchedulePage() {
         <h1 className="text-2xl font-bold">Расписание</h1>
 
         <div className="flex gap-3 flex-wrap">
-          <Select value={mpFilter} onValueChange={(v) => { setMpFilter(v); setDestId("") }}>
+          <Select value={mpFilter} onValueChange={(v) => { if (v) { setMpFilter(v); setDestId("") } }}>
             <SelectTrigger className="w-32 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="wb">WB</SelectItem>
               <SelectItem value="ozon">Ozon</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={destId} onValueChange={setDestId}>
+          <Select value={destId} onValueChange={(v) => v && setDestId(v)}>
             <SelectTrigger className="w-52 border-[#EAC9B0]">
               <SelectValue placeholder="Выберите направление" />
             </SelectTrigger>
@@ -138,13 +138,13 @@ export default function AdminSchedulePage() {
           <DialogHeader><DialogTitle>Новое правило расписания</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>День сдачи</Label>
-              <Select value={form.weekday_from} onValueChange={(v) => setForm((f) => ({ ...f, weekday_from: v }))}>
+              <Select value={form.weekday_from} onValueChange={(v) => v && setForm((f) => ({ ...f, weekday_from: v }))}>
                 <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
                 <SelectContent>{DAYS.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>День доставки</Label>
-              <Select value={form.weekday_to} onValueChange={(v) => setForm((f) => ({ ...f, weekday_to: v }))}>
+              <Select value={form.weekday_to} onValueChange={(v) => v && setForm((f) => ({ ...f, weekday_to: v }))}>
                 <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
                 <SelectContent>{DAYS.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}</SelectContent>
               </Select>
@@ -169,7 +169,7 @@ export default function AdminSchedulePage() {
       <Dialog open={showCopy} onOpenChange={setShowCopy}>
         <DialogContent>
           <DialogHeader><DialogTitle>Скопировать расписание</DialogTitle></DialogHeader>
-          <Select value={copySource} onValueChange={setCopySource}>
+          <Select value={copySource} onValueChange={(v) => v && setCopySource(v)}>
             <SelectTrigger className="border-[#EAC9B0]"><SelectValue placeholder="Выберите источник..." /></SelectTrigger>
             <SelectContent>
               {dests.filter((d) => String(d.id) !== destId).map((d) =>

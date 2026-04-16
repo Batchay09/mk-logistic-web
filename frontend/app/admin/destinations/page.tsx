@@ -54,7 +54,7 @@ export default function AdminDestinationsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-bold">Направления</h1>
           <div className="flex items-center gap-2">
-            <Select value={filter} onValueChange={setFilter}>
+            <Select value={filter} onValueChange={(v) => v && setFilter(v)}>
               <SelectTrigger className="w-32 border-[#EAC9B0]">
                 <SelectValue />
               </SelectTrigger>
@@ -125,7 +125,7 @@ export default function AdminDestinationsPage() {
           <div className="space-y-4">
             <div>
               <Label>Маркетплейс</Label>
-              <Select value={form.marketplace} onValueChange={(v) => setForm((f) => ({ ...f, marketplace: v }))}>
+              <Select value={form.marketplace} onValueChange={(v) => v && setForm((f) => ({ ...f, marketplace: v }))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="wb">Wildberries</SelectItem>

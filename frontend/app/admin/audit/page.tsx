@@ -55,7 +55,7 @@ export default function AdminAuditPage() {
       <div className="space-y-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-bold">История изменений</h1>
-          <Select value={tableFilter} onValueChange={setTableFilter}>
+          <Select value={tableFilter} onValueChange={(v) => v && setTableFilter(v)}>
             <SelectTrigger className="w-44 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Все таблицы</SelectItem>

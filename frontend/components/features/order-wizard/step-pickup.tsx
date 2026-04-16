@@ -47,7 +47,7 @@ export function StepPickup({ state, update }: { state: WizardState; update: (p: 
         <div className="space-y-3 border border-[#EAC9B0] rounded-lg p-4 bg-[#FBF0EA]">
           <div>
             <Label className="text-sm">Город</Label>
-            <Select value={state.pickup_city} onValueChange={(v) => update({ pickup_city: v })}>
+            <Select value={state.pickup_city} onValueChange={(v) => v && update({ pickup_city: v })}>
               <SelectTrigger className="mt-1 border-[#EAC9B0]">
                 <SelectValue placeholder="Выберите город" />
               </SelectTrigger>

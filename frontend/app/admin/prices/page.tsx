@@ -63,14 +63,14 @@ export default function AdminPricesPage() {
         <h1 className="text-2xl font-bold">Тарифы</h1>
 
         <div className="flex gap-3 flex-wrap">
-          <Select value={mpFilter} onValueChange={(v) => { setMpFilter(v); setDestId("") }}>
+          <Select value={mpFilter} onValueChange={(v) => { if (v) { setMpFilter(v); setDestId("") } }}>
             <SelectTrigger className="w-32 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="wb">WB</SelectItem>
               <SelectItem value="ozon">Ozon</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={destId} onValueChange={setDestId}>
+          <Select value={destId} onValueChange={(v) => v && setDestId(v)}>
             <SelectTrigger className="w-52 border-[#EAC9B0]">
               <SelectValue placeholder="Выберите направление" />
             </SelectTrigger>
@@ -159,7 +159,7 @@ export default function AdminPricesPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Скопировать тарифы с другого направления</DialogTitle></DialogHeader>
           <div><Label>Источник</Label>
-            <Select value={copySource} onValueChange={setCopySource}>
+            <Select value={copySource} onValueChange={(v) => v && setCopySource(v)}>
               <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue placeholder="Выберите..." /></SelectTrigger>
               <SelectContent>
                 {dests.filter((d) => String(d.id) !== destId).map((d) =>
