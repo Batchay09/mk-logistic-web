@@ -1,11 +1,17 @@
 "use client"
 
+import { useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import type { WizardState } from "@/app/orders/new/page"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { api } from "@/lib/api"
 
 const MP_LABELS: Record<string, string> = { wb: "Wildberries", ozon: "Ozon" }
+
+interface Company { id: number; company_name: string }
+interface Me { id: number; company_name: string | null }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -17,11 +23,30 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function StepConfirm({ state, update }: { state: WizardState; update: (p: Partial<WizardState>) => void }) {
+  const { data: companies } = useQuery<Company[]>({
+    queryKey: ["companies"],
+    queryFn: () => api.get("/client/companies"),
+  })
+  const { data: me } = useQuery<Me>({
+    queryKey: ["me"],
+    queryFn: () => api.get("/auth/me"),
+  })
+
+  // Auto-fill company on first render: prefer first saved CompanyProfile, fallback to user.company_name
+  useEffect(() => {
+    if (state.company_name) return
+    const first = companies?.[0]?.company_name
+    const fallback = me?.company_name ?? ""
+    const value = first || fallback
+    if (value) update({ company_name: value })
+  }, [companies, me, state.company_name, update])
+
   const pickup = state.service_pickup
     ? `${state.pickup_city}, ${state.pickup_street}, ${state.pickup_house}`
     : "Самопривоз"
 
   const total = state.price_delivery + state.price_pickup + (state.service_palletizing ? state.price_palletizing : 0)
+  const hasCompanies = (companies?.length ?? 0) > 0
 
   return (
     <div className="space-y-4">
@@ -45,11 +70,22 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
         </div>
       </div>
 
-      {/* Company name */}
       <div>
         <Label className="text-sm">Компания для стикера</Label>
+        {hasCompanies && (
+          <select
+            className="mt-1 w-full h-9 rounded-md border border-[#EAC9B0] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4512B]/30"
+            value={companies?.find((c) => c.company_name === state.company_name) ? state.company_name : ""}
+            onChange={(e) => update({ company_name: e.target.value })}
+          >
+            <option value="">— Ввести вручную —</option>
+            {companies?.map((c) => (
+              <option key={c.id} value={c.company_name}>{c.company_name}</option>
+            ))}
+          </select>
+        )}
         <Input
-          className="mt-1 border-[#EAC9B0]"
+          className="mt-2 border-[#EAC9B0]"
           placeholder="Ваша компания или ИП (необязательно)"
           value={state.company_name}
           onChange={(e) => update({ company_name: e.target.value })}
@@ -58,7 +94,6 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
 
       <Separator className="bg-[#EAC9B0]" />
 
-      {/* Price */}
       <div className="space-y-1 bg-[#FBF0EA] rounded-lg p-4 border border-[#EAC9B0]">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Доставка</span>

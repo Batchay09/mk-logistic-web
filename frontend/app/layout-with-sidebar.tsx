@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AppSidebar, MobileTopbar } from "@/components/layout/app-sidebar"
 
 type SidebarRole = "client" | "manager" | "admin"
 
@@ -6,11 +6,14 @@ export function LayoutWithSidebar({ children, role }: { children: React.ReactNod
   return (
     <div className="flex h-screen bg-[#FBF0EA]">
       <AppSidebar role={role} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto p-6">
-          {children}
-        </div>
-      </main>
+      <div className="flex flex-col flex-1 min-w-0 overflow-y-auto">
+        <MobileTopbar role={role} />
+        <main className="flex-1">
+          <div className="max-w-5xl mx-auto p-4 md:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
