@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "МК Логистик — доставка на склады WB и Ozon",
   description: "Оформление заказов на доставку грузов на склады Wildberries и Ozon",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/brand/favicon.svg" },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

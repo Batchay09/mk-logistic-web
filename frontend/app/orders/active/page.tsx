@@ -6,6 +6,7 @@ import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { api } from "@/lib/api"
+import { statusMeta } from "@/lib/order-status"
 import { Truck, Loader2 } from "lucide-react"
 
 interface Order {
@@ -16,15 +17,6 @@ interface Order {
   ship_date: string
   boxes_count: number
   total_amount: number
-}
-
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  confirmed:        { label: "Подтверждён",      cls: "bg-blue-100 text-blue-800" },
-  awaiting_payment: { label: "Ожидает оплаты",   cls: "bg-orange-100 text-orange-800" },
-  paid:             { label: "Оплачен",           cls: "bg-green-100 text-green-800" },
-  assigned:         { label: "Назначен водитель", cls: "bg-purple-100 text-purple-800" },
-  picked_up:        { label: "Забран",            cls: "bg-indigo-100 text-indigo-800" },
-  in_transit:       { label: "В пути",            cls: "bg-cyan-100 text-cyan-800" },
 }
 
 export default function ActiveOrdersPage() {
@@ -53,7 +45,7 @@ export default function ActiveOrdersPage() {
         )}
         <div className="space-y-3">
           {orders.map((order) => {
-            const st = STATUS_MAP[order.status] || { label: order.status, cls: "bg-gray-100 text-gray-700" }
+            const st = statusMeta(order.status)
             return (
               <Link key={order.id} href={`/orders/${order.id}`}>
                 <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-colors cursor-pointer">
@@ -70,7 +62,7 @@ export default function ActiveOrdersPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <span className="font-bold">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
-                      <Badge className={`${st.cls} border-0 text-xs`}>{st.label}</Badge>
+                      <span className={st.cls}>{st.label}</span>
                     </div>
                   </CardContent>
                 </Card>

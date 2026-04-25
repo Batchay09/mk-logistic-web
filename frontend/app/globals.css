@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -87,7 +87,35 @@
   --brand-dark: #B33D1A;
   --brand-light: #EAC9B0;
   --brand-muted: #FBF0EA;
+
+  /* === Order status palette (DaNet design system) === */
+  --status-new-bg: #FEF9C3;        --status-new-fg: #854D0E;
+  --status-confirmed-bg: #DBEAFE;  --status-confirmed-fg: #1E40AF;
+  --status-awaiting-bg: #FFEDD5;   --status-awaiting-fg: #9A3412;
+  --status-paid-bg: #DCFCE7;       --status-paid-fg: #166534;
+  --status-assigned-bg: #F3E8FF;   --status-assigned-fg: #6B21A8;
+  --status-picked-bg: #E0E7FF;     --status-picked-fg: #3730A3;
+  --status-transit-bg: #E0E7FF;    --status-transit-fg: #3730A3;
+  --status-delivered-bg: #DCFCE7;  --status-delivered-fg: #166534;
+  --status-canceled-bg: #FEE2E2;   --status-canceled-fg: #991B1B;
 }
+
+/* Status badge utility (used across orders) */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 0.5rem;
+  font-size: 12px; font-weight: 500; line-height: 1.4;
+  white-space: nowrap;
+}
+.status-new       { background: var(--status-new-bg);       color: var(--status-new-fg); }
+.status-confirmed { background: var(--status-confirmed-bg); color: var(--status-confirmed-fg); }
+.status-awaiting  { background: var(--status-awaiting-bg);  color: var(--status-awaiting-fg); }
+.status-paid      { background: var(--status-paid-bg);      color: var(--status-paid-fg); }
+.status-assigned  { background: var(--status-assigned-bg);  color: var(--status-assigned-fg); }
+.status-picked    { background: var(--status-picked-bg);    color: var(--status-picked-fg); }
+.status-transit   { background: var(--status-transit-bg);   color: var(--status-transit-fg); }
+.status-delivered { background: var(--status-delivered-bg); color: var(--status-delivered-fg); }
+.status-canceled  { background: var(--status-canceled-bg);  color: var(--status-canceled-fg); }
 
 .dark {
   --background: oklch(0.145 0 0);

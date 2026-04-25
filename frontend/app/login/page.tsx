@@ -7,11 +7,11 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Truck, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { AuthShell, AuthHeader } from "@/components/layout/auth-shell"
 import { api } from "@/lib/api"
 import type { CurrentUser } from "@/lib/auth"
 import { getRoleRedirect } from "@/lib/auth"
@@ -45,60 +45,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF0EA] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="bg-[#D4512B] rounded-lg p-2">
-            <Truck className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-2xl font-bold text-[#D4512B]">МК ЛОГИСТИК</span>
-        </div>
-        <Card className="border-[#EAC9B0] shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Вход в кабинет</CardTitle>
-            <CardDescription>Введите email и пароль для входа</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="your@email.ru" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Пароль</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="flex justify-end">
-                  <Link href="/reset-password" className="text-sm text-[#D4512B] hover:underline">
-                    Забыли пароль?
+    <AuthShell>
+      <div className="w-full max-w-sm">
+        <AuthHeader title="Вход в кабинет" subtitle="Введите email и пароль для входа" />
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+            <FormField control={form.control} name="email" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="your@email.ru" autoComplete="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="password" render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Пароль</FormLabel>
+                  <Link href="/reset-password" className="text-xs text-[#D4512B] hover:underline">
+                    Забыли?
                   </Link>
                 </div>
-                <Button type="submit" disabled={loading} className="w-full bg-[#D4512B] hover:bg-[#B33D1A]">
-                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Войти
-                </Button>
-              </form>
-            </Form>
-            <p className="text-center text-sm text-muted-foreground mt-4">
-              Нет аккаунта?{" "}
-              <Link href="/register" className="text-[#D4512B] hover:underline font-medium">
-                Зарегистрироваться
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+                <FormControl>
+                  <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <Button
+              type="submit"
+              disabled={loading}
+              size="lg"
+              className="w-full bg-[#D4512B] hover:bg-[#B33D1A]"
+            >
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Войти
+            </Button>
+          </form>
+        </Form>
+
+        <div className="mt-6 pt-5 border-t border-[#F5F5F5] text-sm text-muted-foreground text-center">
+          Нет аккаунта?{" "}
+          <Link href="/register" className="text-[#D4512B] hover:underline font-medium">
+            Зарегистрироваться
+          </Link>
+        </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }

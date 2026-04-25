@@ -5,8 +5,8 @@ import Link from "next/link"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
+import { statusMeta } from "@/lib/order-status"
 import { Package, ShoppingCart, Truck, Plus, ArrowRight } from "lucide-react"
 
 interface Order {
@@ -17,17 +17,6 @@ interface Order {
   ship_date: string
   boxes_count: number
   total_amount: number
-}
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  new: { label: "В корзине", color: "bg-yellow-100 text-yellow-800" },
-  confirmed: { label: "Подтверждён", color: "bg-blue-100 text-blue-800" },
-  awaiting_payment: { label: "Ожидает оплаты", color: "bg-orange-100 text-orange-800" },
-  paid: { label: "Оплачен", color: "bg-green-100 text-green-800" },
-  assigned: { label: "Назначен", color: "bg-purple-100 text-purple-800" },
-  in_transit: { label: "В пути", color: "bg-indigo-100 text-indigo-800" },
-  delivered: { label: "Доставлен", color: "bg-green-100 text-green-800" },
-  canceled: { label: "Отменён", color: "bg-red-100 text-red-800" },
 }
 
 export default function DashboardPage() {
@@ -129,7 +118,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-2">
                 {active.slice(0, 5).map((order) => {
-                  const st = STATUS_LABELS[order.status] || { label: order.status, color: "bg-gray-100 text-gray-800" }
+                  const st = statusMeta(order.status)
                   return (
                     <Link key={order.id} href={`/orders/${order.id}`}>
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#EAC9B0] hover:border-[#D4512B] transition-colors">
@@ -140,7 +129,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
-                          <Badge className={`text-xs ${st.color} border-0`}>{st.label}</Badge>
+                          <span className={st.cls}>{st.label}</span>
                         </div>
                       </div>
                     </Link>

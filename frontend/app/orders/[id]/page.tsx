@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { api, ApiError } from "@/lib/api"
+import { api, API_URL } from "@/lib/api"
+import { statusMeta } from "@/lib/order-status"
 import { FileDown, ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -19,18 +20,6 @@ interface Order {
   service_pickup: boolean; service_palletizing: boolean
   price_delivery: number; price_pickup: number; price_palletizing: number; total_amount: number
   payment_method: string | null
-}
-
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  new:              { label: "В корзине",          cls: "bg-yellow-100 text-yellow-800" },
-  confirmed:        { label: "Подтверждён",         cls: "bg-blue-100 text-blue-800" },
-  awaiting_payment: { label: "Ожидает оплаты",      cls: "bg-orange-100 text-orange-800" },
-  paid:             { label: "Оплачен",             cls: "bg-green-100 text-green-800" },
-  assigned:         { label: "Назначен водитель",   cls: "bg-purple-100 text-purple-800" },
-  picked_up:        { label: "Забран",              cls: "bg-indigo-100 text-indigo-800" },
-  in_transit:       { label: "В пути",              cls: "bg-cyan-100 text-cyan-800" },
-  delivered:        { label: "Доставлен",           cls: "bg-green-100 text-green-800" },
-  canceled:         { label: "Отменён",             cls: "bg-red-100 text-red-800" },
 }
 
 const STICKER_STATUSES = new Set(["confirmed", "awaiting_payment", "paid", "assigned", "picked_up", "in_transit", "delivered"])
@@ -54,7 +43,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   async function downloadStickers() {
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/stickers/${id}.pdf`
+      const url = `${API_URL}/stickers/${id}.pdf`
       const res = await fetch(url, { credentials: "include" })
       if (!res.ok) throw new Error("Нет доступа к стикерам")
       const blob = await res.blob()
@@ -79,7 +68,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     </LayoutWithSidebar>
   )
 
-  const st = STATUS_MAP[order.status] || { label: order.status, cls: "bg-gray-100 text-gray-700" }
+  const st = statusMeta(order.status)
 
   return (
     <LayoutWithSidebar role="client">
@@ -89,7 +78,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <Button variant="ghost" size="icon" className="text-[#D4512B]"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <h1 className="text-2xl font-bold">Заказ #{order.id}</h1>
-          <Badge className={`${st.cls} border-0 ml-auto`}>{st.label}</Badge>
+          <span className={`${st.cls} ml-auto`}>{st.label}</span>
         </div>
 
         <Card className="border-[#EAC9B0]">

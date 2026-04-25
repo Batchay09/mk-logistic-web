@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,21 +9,26 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-[#D4512B] text-white px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#EAC9B0] rounded-lg p-2">
-            <Truck className="h-6 w-6 text-[#D4512B]" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">МК ЛОГИСТИК</span>
-        </div>
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-[#EAC9B0] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image
+            src="/brand/logo-mk-logistik.jpg"
+            alt="МК Логистик"
+            width={36}
+            height={36}
+            className="rounded-md"
+            priority
+          />
+          <span className="text-base sm:text-lg font-bold tracking-tight text-[#1A1A1A]">МК ЛОГИСТИК</span>
+        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/login">
-            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#D4512B] bg-transparent">
+            <Button variant="ghost" className="hover:text-[#D4512B] hover:bg-[#FBF0EA]">
               Войти
             </Button>
           </Link>
           <Link href="/register">
-            <Button className="bg-white text-[#D4512B] hover:bg-[#EAC9B0] font-semibold">
+            <Button className="bg-[#D4512B] hover:bg-[#B33D1A] text-white font-medium">
               Регистрация
             </Button>
           </Link>
@@ -30,29 +36,46 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#D4512B] to-[#B33D1A] text-white py-20 px-6 text-center">
-        <Badge className="bg-[#EAC9B0] text-[#D4512B] mb-4 text-sm font-medium">
-          Доставка на склады WB и Ozon
-        </Badge>
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-          Логистика для маркетплейсов<br />
-          <span className="text-[#EAC9B0]">просто и удобно</span>
-        </h1>
-        <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
-          Оформляйте заказы на доставку грузов на склады Wildberries и Ozon онлайн.
-          Отслеживайте статусы, получайте стикеры и управляйте компанией в одном месте.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/register">
-            <Button size="lg" className="bg-white text-[#D4512B] hover:bg-[#EAC9B0] font-bold text-base px-8">
-              Создать заказ
-            </Button>
-          </Link>
-          <Link href="/login">
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent text-base px-8">
-              Войти в кабинет
-            </Button>
-          </Link>
+      <section
+        className="text-white py-16 sm:py-20 px-6"
+        style={{ background: "linear-gradient(180deg, #D4512B 0%, #B33D1A 100%)" }}
+      >
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+          <div className="text-center lg:text-left">
+            <Badge className="bg-white/15 text-white mb-4 text-sm font-medium border-0 backdrop-blur-sm">
+              Доставка на склады WB и Ozon
+            </Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-[1.1] tracking-tight">
+              Логистика для маркетплейсов<br />
+              <span className="text-[#EAC9B0]">просто и удобно</span>
+            </h1>
+            <p className="text-base sm:text-lg text-white/85 mb-7 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+              Оформляйте заказы на доставку грузов на склады Wildberries и Ozon онлайн.
+              Отслеживайте статусы, получайте стикеры и управляйте компанией в одном месте.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link href="/register">
+                <Button size="lg" className="bg-white text-[#D4512B] hover:bg-[#FBF0EA] font-bold text-base px-7">
+                  Создать заказ
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/15 bg-transparent text-base px-7">
+                  Войти в кабинет
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <div className="hidden lg:flex justify-center">
+            <Image
+              src="/brand/illustration-warehouse.svg"
+              alt=""
+              width={520}
+              height={290}
+              className="rounded-2xl shadow-xl"
+              priority
+            />
+          </div>
         </div>
       </section>
 
@@ -69,13 +92,13 @@ export default function LandingPage() {
               { icon: Shield, title: "PDF стикеры", desc: "Стикеры 58×40мм с QR-кодом для каждой коробки — готовы сразу после оплаты" },
               { icon: Truck, title: "Забор груза", desc: "Нужен забор? Укажите адрес при оформлении — наш водитель приедет в срок" },
             ].map(({ icon: Icon, title, desc }) => (
-              <Card key={title} className="border-[#EAC9B0] hover:shadow-md transition-shadow">
+              <Card key={title} className="border-[#EAC9B0] hover:shadow-md transition-shadow rounded-xl">
                 <CardContent className="pt-6">
-                  <div className="bg-[#D4512B] rounded-lg p-2 w-10 h-10 flex items-center justify-center mb-3">
-                    <Icon className="h-5 w-5 text-white" />
+                  <div className="bg-[#FBF0EA] rounded-lg p-2 w-10 h-10 flex items-center justify-center mb-3">
+                    <Icon className="h-5 w-5 text-[#D4512B]" />
                   </div>
                   <h3 className="font-semibold text-[#1A1A1A] mb-1">{title}</h3>
-                  <p className="text-sm text-muted-foreground">{desc}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
                 </CardContent>
               </Card>
             ))}
