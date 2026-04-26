@@ -26,6 +26,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { HowItWorks } from "@/components/features/HowItWorks"
 import { Trust } from "@/components/features/Trust"
 import { Faq } from "@/components/features/Faq"
+import { PricingTeaser } from "@/components/features/PricingTeaser"
 
 const features = [
   {
@@ -217,6 +218,9 @@ export default function LandingPage() {
           </div>
         </Container>
       </Section>
+
+      {/* ====================== PRICING TEASER ====================== */}
+      <PricingTeaser />
 
       {/* ====================== FAQ ====================== */}
       <Faq />
