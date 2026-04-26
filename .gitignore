@@ -55,3 +55,10 @@ backend/app/fonts/
 /*.png
 /*.jpeg
 /*.jpg
+
+# Claude Code local settings — могут содержать секреты (пароли, токены)
+.claude/settings.local.json
+.claude/**/__pycache__/
+
+# Local SQLite DB
+backend/dev.db

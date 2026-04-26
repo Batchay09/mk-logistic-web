@@ -1,0 +1,18 @@
+[tool.ruff]
+# Linter не должен проверять чужой код (skills, vendored packages).
+# force-exclude применяется даже когда путь явно передан в CLI (важно для pre-commit hook).
+extend-exclude = [
+    ".claude",
+    ".venv",
+    "node_modules",
+    "frontend/.next",
+]
+force-exclude = true
+
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Базовые правила. Backend код будет проходить strict проверку.
+select = ["E", "F", "W", "I"]
+ignore = []
