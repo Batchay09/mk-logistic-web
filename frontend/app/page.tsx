@@ -25,6 +25,7 @@ import {
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { HowItWorks } from "@/components/features/HowItWorks"
 import { Trust } from "@/components/features/Trust"
+import { Faq } from "@/components/features/Faq"
 
 const features = [
   {
@@ -216,6 +217,9 @@ export default function LandingPage() {
           </div>
         </Container>
       </Section>
+
+      {/* ====================== FAQ ====================== */}
+      <Faq />
 
       {/* ====================== CTA ====================== */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] text-white py-20 sm:py-28">
