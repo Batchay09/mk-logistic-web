@@ -109,16 +109,16 @@ export default function RegisterPage() {
               )} />
             </div>
 
-            <Button type="submit" disabled={loading} size="lg" className="w-full bg-[#D4512B] hover:bg-[#B33D1A] mt-2">
+            <Button type="submit" disabled={loading} size="lg" className="w-full mt-2">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Создать аккаунт
             </Button>
           </form>
         </Form>
 
-        <div className="mt-5 pt-4 border-t border-[#F5F5F5] text-sm text-muted-foreground text-center">
+        <div className="mt-5 pt-4 border-t border-border text-sm text-muted-foreground text-center">
           Уже есть аккаунт?{" "}
-          <Link href="/login" className="text-[#D4512B] hover:underline font-medium">Войти</Link>
+          <Link href="/login" className="text-primary hover:underline font-medium">Войти</Link>
         </div>
       </div>
     </AuthShell>

@@ -11,6 +11,14 @@ from sqlalchemy.sql import func
 from app.db.base import Base
 
 
+def _enum(enum_cls):
+    """SQLAlchemy Enum, сериализующий по .value (lowercase),
+    так как миграции создают enum'ы с lowercase значениями.
+    Без этого SQLAlchemy шлёт name (uppercase) → 'invalid input value for enum'.
+    """
+    return Enum(enum_cls, values_callable=lambda obj: [e.value for e in obj])
+
+
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     MANAGER = "manager"
@@ -48,7 +56,7 @@ class User(Base):
     tg_id: Mapped[Optional[int]] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
     full_name: Mapped[Optional[str]] = mapped_column(String)
     username: Mapped[Optional[str]] = mapped_column(String)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.CLIENT)
+    role: Mapped[UserRole] = mapped_column(_enum(UserRole), default=UserRole.CLIENT)
     phone: Mapped[Optional[str]] = mapped_column(String)
     company_name: Mapped[Optional[str]] = mapped_column(String)
     policy_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -102,7 +110,7 @@ class Destination(Base):
     __tablename__ = "destinations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    marketplace: Mapped[Marketplace] = mapped_column(Enum(Marketplace))
+    marketplace: Mapped[Marketplace] = mapped_column(_enum(Marketplace))
     name: Mapped[str] = mapped_column(String)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -150,12 +158,12 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), default=OrderStatus.DRAFT)
-    marketplace: Mapped[Marketplace] = mapped_column(Enum(Marketplace))
+    status: Mapped[OrderStatus] = mapped_column(_enum(OrderStatus), default=OrderStatus.DRAFT)
+    marketplace: Mapped[Marketplace] = mapped_column(_enum(Marketplace))
     destination_id: Mapped[int] = mapped_column(ForeignKey("destinations.id"))
 
     company_name: Mapped[Optional[str]] = mapped_column(String)
-    payment_method: Mapped[Optional[PaymentMethod]] = mapped_column(Enum(PaymentMethod), nullable=True)
+    payment_method: Mapped[Optional[PaymentMethod]] = mapped_column(_enum(PaymentMethod), nullable=True)
 
     ship_date: Mapped[date] = mapped_column(Date)
     arrival_date: Mapped[Optional[date]] = mapped_column(Date)

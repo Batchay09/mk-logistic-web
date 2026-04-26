@@ -9,12 +9,9 @@ const FEATURES = [
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex bg-[#FBF0EA]">
-      {/* Brand side — hidden on small screens */}
-      <aside
-        className="hidden lg:flex flex-1 items-center justify-center p-12 text-white"
-        style={{ background: "linear-gradient(180deg, #D4512B 0%, #B33D1A 100%)" }}
-      >
+    <div className="min-h-screen flex bg-muted">
+      {/* Brand side — hidden on small screens. Invariant brand surface (всегда оранжевая) */}
+      <aside className="hidden lg:flex flex-1 items-center justify-center p-12 text-white bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)]">
         <div className="max-w-md">
           <Image
             src="/brand/logo-mk-logistik.jpg"
@@ -44,7 +41,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Form side */}
-      <main className="flex-1 flex items-center justify-center p-6 bg-white">
+      <main className="flex-1 flex items-center justify-center p-6 bg-background">
         {children}
       </main>
     </div>
@@ -63,9 +60,9 @@ export function AuthHeader({ title, subtitle }: { title: string; subtitle: strin
           className="rounded-md"
           priority
         />
-        <span className="font-bold text-sm tracking-wider">МК ЛОГИСТИК</span>
+        <span className="font-bold text-sm tracking-wider text-foreground">МК ЛОГИСТИК</span>
       </div>
-      <h1 className="text-2xl font-bold tracking-tight text-[#1A1A1A]">{title}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
       <p className="text-sm text-muted-foreground mt-1.5">{subtitle}</p>
     </>
   )

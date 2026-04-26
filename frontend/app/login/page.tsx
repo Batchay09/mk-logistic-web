@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -22,7 +22,7 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get("next") || null
@@ -45,56 +45,59 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell>
-      <div className="w-full max-w-sm">
-        <AuthHeader title="Вход в кабинет" subtitle="Введите email и пароль для входа" />
+    <div className="w-full max-w-sm">
+      <AuthHeader title="Вход в кабинет" subtitle="Введите email и пароль для входа" />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
-            <FormField control={form.control} name="email" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="your@email.ru" autoComplete="email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <FormField control={form.control} name="email" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="your@email.ru" autoComplete="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
 
-            <FormField control={form.control} name="password" render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Пароль</FormLabel>
-                  <Link href="/reset-password" className="text-xs text-[#D4512B] hover:underline">
-                    Забыли?
-                  </Link>
-                </div>
-                <FormControl>
-                  <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+          <FormField control={form.control} name="password" render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel>Пароль</FormLabel>
+                <Link href="/reset-password" className="text-xs text-primary hover:underline">
+                  Забыли?
+                </Link>
+              </div>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
 
-            <Button
-              type="submit"
-              disabled={loading}
-              size="lg"
-              className="w-full bg-[#D4512B] hover:bg-[#B33D1A]"
-            >
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Войти
-            </Button>
-          </form>
-        </Form>
+          <Button type="submit" disabled={loading} size="lg" className="w-full">
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Войти
+          </Button>
+        </form>
+      </Form>
 
-        <div className="mt-6 pt-5 border-t border-[#F5F5F5] text-sm text-muted-foreground text-center">
-          Нет аккаунта?{" "}
-          <Link href="/register" className="text-[#D4512B] hover:underline font-medium">
-            Зарегистрироваться
-          </Link>
-        </div>
+      <div className="mt-6 pt-5 border-t border-border text-sm text-muted-foreground text-center">
+        Нет аккаунта?{" "}
+        <Link href="/register" className="text-primary hover:underline font-medium">
+          Зарегистрироваться
+        </Link>
       </div>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <AuthShell>
+      <Suspense fallback={<div className="text-muted-foreground">Загрузка...</div>}>
+        <LoginForm />
+      </Suspense>
     </AuthShell>
   )
 }
