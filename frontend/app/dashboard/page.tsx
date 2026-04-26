@@ -5,9 +5,18 @@ import Link from "next/link"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { H2, H3, H4, Lead, Muted } from "@/components/ui/typography"
+import { VStack, HStack } from "@/components/ui/stack"
 import { api } from "@/lib/api"
 import { statusMeta } from "@/lib/order-status"
-import { Package, ShoppingCart, Truck, Plus, ArrowRight } from "lucide-react"
+import {
+  Package,
+  ShoppingCart,
+  Truck,
+  Plus,
+  ArrowRight,
+  type LucideIcon,
+} from "lucide-react"
 
 interface Order {
   id: number
@@ -19,6 +28,45 @@ interface Order {
   total_amount: number
 }
 
+interface StatCardProps {
+  href: string
+  icon: LucideIcon
+  iconClassName: string
+  value: number | string
+  label: string
+}
+
+function StatCard({ href, icon: Icon, iconClassName, value, label }: StatCardProps) {
+  return (
+    <Link href={href} className="group">
+      <Card
+        className={
+          "border-border bg-card rounded-2xl shadow-sm " +
+          "hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40 " +
+          "transition-all duration-[var(--duration-base)] cursor-pointer"
+        }
+      >
+        <CardContent className="p-5 flex items-center gap-4">
+          <div
+            className={
+              "rounded-xl p-3 transition-colors duration-[var(--duration-base)] " +
+              iconClassName
+            }
+          >
+            <Icon className="size-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <p className="text-2xl font-bold text-foreground leading-none">
+              {value}
+            </p>
+            <Muted className="mt-1">{label}</Muted>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
 export default function DashboardPage() {
   const { data: allOrders = [] } = useQuery<Order[]>({
     queryKey: ["orders"],
@@ -26,78 +74,80 @@ export default function DashboardPage() {
   })
 
   const cart = allOrders.filter((o) => o.status === "new")
-  const active = allOrders.filter((o) => !["delivered", "canceled", "new"].includes(o.status))
-  const recent = allOrders.filter((o) => ["delivered", "canceled"].includes(o.status)).slice(0, 3)
+  const active = allOrders.filter(
+    (o) => !["delivered", "canceled", "new"].includes(o.status),
+  )
+  const cartTotal = cart.reduce((s, o) => s + o.total_amount, 0)
 
   return (
     <LayoutWithSidebar role="client">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">Мой кабинет</h1>
-          <Link href="/orders/new">
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]">
-              <Plus className="h-4 w-4 mr-2" />
+      <VStack gap="lg" className="w-full">
+        {/* Header */}
+        <HStack justify="between" align="center" className="flex-wrap gap-3">
+          <div className="space-y-1">
+            <H2 className="text-2xl sm:text-3xl">Мой кабинет</H2>
+            <Muted>Все заказы и компании в одном месте</Muted>
+          </div>
+          <Link href="/orders/new" className="ml-auto">
+            <Button
+              size="lg"
+              className="h-11 px-5 shadow-sm tap-target font-medium"
+            >
+              <Plus className="size-4" aria-hidden />
               Новый заказ
             </Button>
           </Link>
-        </div>
+        </HStack>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/cart">
-            <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-colors cursor-pointer">
-              <CardContent className="pt-5 flex items-center gap-4">
-                <div className="bg-yellow-100 rounded-lg p-3">
-                  <ShoppingCart className="h-5 w-5 text-yellow-700" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{cart.length}</p>
-                  <p className="text-sm text-muted-foreground">В корзине</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/orders/active">
-            <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-colors cursor-pointer">
-              <CardContent className="pt-5 flex items-center gap-4">
-                <div className="bg-blue-100 rounded-lg p-3">
-                  <Truck className="h-5 w-5 text-blue-700" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{active.length}</p>
-                  <p className="text-sm text-muted-foreground">Активных заказов</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/orders/history">
-            <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-colors cursor-pointer">
-              <CardContent className="pt-5 flex items-center gap-4">
-                <div className="bg-[#EAC9B0] rounded-lg p-3">
-                  <Package className="h-5 w-5 text-[#D4512B]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{allOrders.length}</p>
-                  <p className="text-sm text-muted-foreground">Всего заказов</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            href="/cart"
+            icon={ShoppingCart}
+            iconClassName="bg-warning/15 text-warning group-hover:bg-warning/25"
+            value={cart.length}
+            label="В корзине"
+          />
+          <StatCard
+            href="/orders/active"
+            icon={Truck}
+            iconClassName="bg-info/15 text-info group-hover:bg-info/25"
+            value={active.length}
+            label="Активных заказов"
+          />
+          <StatCard
+            href="/orders/history"
+            icon={Package}
+            iconClassName="bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+            value={allOrders.length}
+            label="Всего заказов"
+          />
         </div>
 
         {/* Cart reminder */}
         {cart.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="pt-5 flex items-center justify-between">
+          <Card className="border-primary/20 bg-primary/5 rounded-2xl shadow-sm">
+            <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <p className="font-semibold text-orange-800">У вас {cart.length} заказ(а) в корзине</p>
-                <p className="text-sm text-orange-700">
-                  Итого: {cart.reduce((s, o) => s + o.total_amount, 0).toLocaleString("ru-RU")} ₽
+                <p className="font-semibold text-foreground">
+                  У вас {cart.length} заказ
+                  {cart.length === 1 ? "" : cart.length < 5 ? "а" : "ов"}{" "}
+                  в корзине
                 </p>
+                <Muted>
+                  Итого:{" "}
+                  <span className="font-semibold text-foreground">
+                    {cartTotal.toLocaleString("ru-RU")} ₽
+                  </span>
+                </Muted>
               </div>
-              <Link href="/cart">
-                <Button className="bg-[#D4512B] hover:bg-[#B33D1A]">
-                  Оплатить <ArrowRight className="h-4 w-4 ml-1" />
+              <Link href="/cart" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto h-11 px-5 shadow-sm tap-target font-medium"
+                >
+                  Оплатить
+                  <ArrowRight className="size-4" aria-hidden />
                 </Button>
               </Link>
             </CardContent>
@@ -106,56 +156,81 @@ export default function DashboardPage() {
 
         {/* Active orders */}
         {active.length > 0 && (
-          <Card className="border-[#EAC9B0]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold flex items-center justify-between">
-                Активные заказы
-                <Link href="/orders/active" className="text-sm text-[#D4512B] font-normal hover:underline">
-                  Все →
+          <Card className="border-border bg-card rounded-2xl shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <H4 className="text-base sm:text-lg">Активные заказы</H4>
+                <Link
+                  href="/orders/active"
+                  className="text-sm font-medium text-primary hover:underline tap-target inline-flex items-center"
+                >
+                  Все
+                  <ArrowRight className="size-3.5 ml-1" aria-hidden />
                 </Link>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+            <CardContent className="pt-0">
+              <ul className="flex flex-col gap-2">
                 {active.slice(0, 5).map((order) => {
                   const st = statusMeta(order.status)
                   return (
-                    <Link key={order.id} href={`/orders/${order.id}`}>
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#EAC9B0] hover:border-[#D4512B] transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-[#D4512B]">#{order.id}</span>
-                          <span className="text-sm">{order.destination_name}</span>
-                          <span className="text-xs text-muted-foreground">{order.boxes_count} кор.</span>
+                    <li key={order.id}>
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className={
+                          "flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl " +
+                          "border border-border bg-background " +
+                          "hover:border-primary/40 hover:bg-muted/40 " +
+                          "transition-colors duration-[var(--duration-fast)]"
+                        }
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-sm font-semibold text-primary shrink-0">
+                            #{order.id}
+                          </span>
+                          <span className="text-sm text-foreground truncate">
+                            {order.destination_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {order.boxes_count} кор.
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <span className="text-sm font-medium text-foreground">
+                            {order.total_amount.toLocaleString("ru-RU")} ₽
+                          </span>
                           <span className={st.cls}>{st.label}</span>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             </CardContent>
           </Card>
         )}
 
         {/* Empty state */}
         {allOrders.length === 0 && (
-          <Card className="border-[#EAC9B0] border-dashed">
-            <CardContent className="pt-10 pb-10 text-center">
-              <Package className="h-10 w-10 text-[#EAC9B0] mx-auto mb-3" />
-              <h3 className="font-semibold mb-1">Заказов пока нет</h3>
-              <p className="text-sm text-muted-foreground mb-4">Создайте первый заказ на доставку</p>
+          <Card className="border-dashed border-border bg-muted/30 rounded-2xl">
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto bg-primary/10 text-primary rounded-2xl p-4 w-16 h-16 flex items-center justify-center mb-4">
+                <Package className="size-7" aria-hidden />
+              </div>
+              <H3 className="text-xl mb-1">Заказов пока нет</H3>
+              <Lead className="text-base mb-5">
+                Создайте первый заказ на доставку
+              </Lead>
               <Link href="/orders/new">
-                <Button className="bg-[#D4512B] hover:bg-[#B33D1A]">
-                  <Plus className="h-4 w-4 mr-2" /> Создать заказ
+                <Button size="lg" className="h-11 px-6 shadow-sm tap-target">
+                  <Plus className="size-4" aria-hidden />
+                  Создать заказ
                 </Button>
               </Link>
             </CardContent>
           </Card>
         )}
-      </div>
+      </VStack>
     </LayoutWithSidebar>
   )
 }
