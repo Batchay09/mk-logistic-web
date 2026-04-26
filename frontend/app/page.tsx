@@ -23,6 +23,7 @@ import {
   Muted,
 } from "@/components/ui/typography"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { HowItWorks } from "@/components/features/HowItWorks"
 
 const features = [
   {
@@ -177,6 +178,9 @@ export default function LandingPage() {
           </div>
         </Container>
       </section>
+
+      {/* ====================== HOW IT WORKS ====================== */}
+      <HowItWorks />
 
       {/* ====================== FEATURES ====================== */}
       <Section tone="muted" spacing="lg">
