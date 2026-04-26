@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/typography"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { HowItWorks } from "@/components/features/HowItWorks"
+import { Trust } from "@/components/features/Trust"
 
 const features = [
   {
@@ -178,6 +179,9 @@ export default function LandingPage() {
           </div>
         </Container>
       </section>
+
+      {/* ====================== TRUST ====================== */}
+      <Trust />
 
       {/* ====================== HOW IT WORKS ====================== */}
       <HowItWorks />
