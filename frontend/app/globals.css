@@ -4,41 +4,55 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ========================================================================
+   МК ЛОГИСТИК — Design System
+   Источник правды для цветов, шрифтов, отступов, теней, анимаций.
+   Правило: НИКАКИХ хардкодных значений в компонентах. Только токены.
+   ======================================================================== */
+
 @theme inline {
+  /* === Colors (mapped to CSS vars below for theming) === */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* === Fonts === */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-geist-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+
+  /* === Radius scale (friendly, B2B) === */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -46,43 +60,83 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* === Shadows (warm, brand-tinted) === */
+  --shadow-xs: 0 1px 2px 0 rgb(180 70 35 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(180 70 35 / 0.06), 0 1px 2px -1px rgb(180 70 35 / 0.06);
+  --shadow-md: 0 4px 8px -2px rgb(180 70 35 / 0.08), 0 2px 4px -2px rgb(180 70 35 / 0.06);
+  --shadow-lg: 0 12px 20px -4px rgb(180 70 35 / 0.10), 0 4px 8px -4px rgb(180 70 35 / 0.06);
+  --shadow-xl: 0 24px 32px -8px rgb(180 70 35 / 0.12), 0 8px 12px -6px rgb(180 70 35 / 0.06);
+  --shadow-2xl: 0 32px 64px -16px rgb(180 70 35 / 0.18);
+  --shadow-inner: inset 0 2px 4px 0 rgb(180 70 35 / 0.05);
+  --shadow-brand: 0 8px 24px -4px rgb(212 81 43 / 0.32);
+  --shadow-glow: 0 0 0 1px rgb(212 81 43 / 0.10), 0 8px 32px -8px rgb(212 81 43 / 0.30);
+
+  /* === Animation === */
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.5, 1.5, 0.5, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 350ms;
 }
 
+/* ========================================================================
+   Light theme (default) — warm, friendly, B2B
+   ======================================================================== */
 :root {
-  /* МК Логистик brand: кирпично-оранжевый #D4512B, бежевый #EAC9B0 */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.15 0 0);
+  --foreground: oklch(0.18 0.02 40);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
+  --card-foreground: oklch(0.18 0.02 40);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.55 0.185 37);          /* #D4512B кирпично-оранжевый */
-  --primary-foreground: oklch(1 0 0);        /* белый текст на кнопках */
-  --secondary: oklch(0.88 0.04 65);          /* #EAC9B0 бежевый */
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.96 0.015 65);             /* #FBF0EA светлый персиковый */
-  --muted-foreground: oklch(0.50 0 0);
-  --accent: oklch(0.88 0.04 65);             /* бежевый */
-  --accent-foreground: oklch(0.15 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.88 0.02 65);
-  --input: oklch(0.92 0.01 65);
-  --ring: oklch(0.55 0.185 37);
-  --chart-1: oklch(0.55 0.185 37);
-  --chart-2: oklch(0.65 0.15 55);
-  --chart-3: oklch(0.75 0.1 65);
-  --chart-4: oklch(0.85 0.05 65);
-  --chart-5: oklch(0.45 0.18 37);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.15 0.02 37);            /* тёмный сайдбар */
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.55 0.185 37);
+  --popover-foreground: oklch(0.18 0.02 40);
+
+  /* Brand: кирпично-оранжевый #D4512B */
+  --primary: oklch(0.58 0.175 37);
+  --primary-foreground: oklch(1 0 0);
+
+  /* Бежевый #EAC9B0 */
+  --secondary: oklch(0.88 0.04 65);
+  --secondary-foreground: oklch(0.20 0.02 40);
+
+  /* Светлый персиковый #FBF0EA */
+  --muted: oklch(0.97 0.012 65);
+  --muted-foreground: oklch(0.50 0.02 40);
+
+  --accent: oklch(0.93 0.025 60);
+  --accent-foreground: oklch(0.20 0.02 40);
+
+  --destructive: oklch(0.62 0.235 27);
+  --success: oklch(0.65 0.16 145);
+  --warning: oklch(0.78 0.14 75);
+  --info: oklch(0.62 0.16 235);
+
+  --border: oklch(0.90 0.015 60);
+  --input: oklch(0.93 0.012 60);
+  --ring: oklch(0.58 0.175 37);
+
+  --chart-1: oklch(0.58 0.175 37);
+  --chart-2: oklch(0.68 0.14 55);
+  --chart-3: oklch(0.78 0.10 70);
+  --chart-4: oklch(0.55 0.16 235);
+  --chart-5: oklch(0.65 0.16 145);
+
+  /* Дружелюбный radius — больше скруглений */
+  --radius: 0.75rem;
+
+  /* Sidebar: глубокий тёплый коричневый */
+  --sidebar: oklch(0.20 0.025 40);
+  --sidebar-foreground: oklch(0.96 0.005 60);
+  --sidebar-primary: oklch(0.58 0.175 37);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.25 0.03 37);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.25 0.02 37);
-  --sidebar-ring: oklch(0.55 0.185 37);
-  /* Brand shortcuts */
+  --sidebar-accent: oklch(0.28 0.03 40);
+  --sidebar-accent-foreground: oklch(0.96 0.005 60);
+  --sidebar-border: oklch(0.28 0.025 40);
+  --sidebar-ring: oklch(0.58 0.175 37);
+
+  /* Brand shortcuts (использовать ТОЛЬКО для специфичных декоративных мест) */
   --brand: #D4512B;
   --brand-dark: #B33D1A;
   --brand-light: #EAC9B0;
@@ -100,10 +154,115 @@
   --status-canceled-bg: #FEE2E2;   --status-canceled-fg: #991B1B;
 }
 
-/* Status badge utility (used across orders) */
+/* ========================================================================
+   Dark theme — warm dark (не серая, а тёплая под brand)
+   ======================================================================== */
+.dark {
+  --background: oklch(0.16 0.015 40);
+  --foreground: oklch(0.96 0.008 60);
+
+  --card: oklch(0.21 0.02 40);
+  --card-foreground: oklch(0.96 0.008 60);
+
+  --popover: oklch(0.21 0.02 40);
+  --popover-foreground: oklch(0.96 0.008 60);
+
+  --primary: oklch(0.68 0.18 40);
+  --primary-foreground: oklch(0.16 0.015 40);
+
+  --secondary: oklch(0.28 0.03 40);
+  --secondary-foreground: oklch(0.96 0.008 60);
+
+  --muted: oklch(0.24 0.02 40);
+  --muted-foreground: oklch(0.70 0.015 60);
+
+  --accent: oklch(0.32 0.04 40);
+  --accent-foreground: oklch(0.96 0.008 60);
+
+  --destructive: oklch(0.70 0.20 27);
+  --success: oklch(0.72 0.16 145);
+  --warning: oklch(0.82 0.14 75);
+  --info: oklch(0.72 0.16 235);
+
+  --border: oklch(0.30 0.025 40);
+  --input: oklch(0.28 0.025 40);
+  --ring: oklch(0.68 0.18 40);
+
+  --chart-1: oklch(0.68 0.18 40);
+  --chart-2: oklch(0.74 0.14 55);
+  --chart-3: oklch(0.82 0.10 70);
+  --chart-4: oklch(0.65 0.16 235);
+  --chart-5: oklch(0.72 0.16 145);
+
+  --sidebar: oklch(0.13 0.015 40);
+  --sidebar-foreground: oklch(0.96 0.008 60);
+  --sidebar-primary: oklch(0.68 0.18 40);
+  --sidebar-primary-foreground: oklch(0.16 0.015 40);
+  --sidebar-accent: oklch(0.22 0.025 40);
+  --sidebar-accent-foreground: oklch(0.96 0.008 60);
+  --sidebar-border: oklch(0.24 0.02 40);
+  --sidebar-ring: oklch(0.68 0.18 40);
+}
+
+/* ========================================================================
+   Base layer
+   ======================================================================== */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Smooth scroll for anchor navigation */
+  html { scroll-behavior: smooth; }
+  /* Better focus ring for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  /* Selection color matches brand */
+  ::selection {
+    background: oklch(from var(--primary) l c h / 0.20);
+    color: var(--foreground);
+  }
+}
+
+/* ========================================================================
+   Utilities — safe area, focus ring, container queries helpers
+   ======================================================================== */
+@utility pt-safe { padding-top: max(env(safe-area-inset-top), 0px); }
+@utility pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+@utility pl-safe { padding-left: max(env(safe-area-inset-left), 0px); }
+@utility pr-safe { padding-right: max(env(safe-area-inset-right), 0px); }
+@utility px-safe {
+  padding-left: max(env(safe-area-inset-left), 0px);
+  padding-right: max(env(safe-area-inset-right), 0px);
+}
+@utility py-safe {
+  padding-top: max(env(safe-area-inset-top), 0px);
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+/* Tap target — Apple HIG требует минимум 44px для тач-элементов */
+@utility tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ========================================================================
+   Order status badges (используются в таблицах заказов)
+   ======================================================================== */
 .status-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 0.5rem;
+  padding: 2px 8px; border-radius: var(--radius-md);
   font-size: 12px; font-weight: 500; line-height: 1.4;
   white-space: nowrap;
 }
@@ -116,49 +275,3 @@
 .status-transit   { background: var(--status-transit-bg);   color: var(--status-transit-fg); }
 .status-delivered { background: var(--status-delivered-bg); color: var(--status-delivered-fg); }
 .status-canceled  { background: var(--status-canceled-bg);  color: var(--status-canceled-fg); }
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}

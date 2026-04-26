@@ -12,6 +12,7 @@ import {
   HeadphonesIcon, Truck, Users, MapPin, DollarSign, Calendar, ClipboardList,
   LogOut, BarChart3, Search, Menu
 } from "lucide-react"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 interface NavItem {
   href: string
@@ -82,7 +83,7 @@ function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () 
       </div>
 
       <div className="px-5 pt-3 pb-1">
-        <span className="text-xs bg-[#D4512B]/20 text-[#EAC9B0] px-2 py-0.5 rounded capitalize">
+        <span className="text-xs bg-primary/20 text-secondary px-2 py-0.5 rounded-md capitalize font-medium">
           {roleLabel(role)}
         </span>
       </div>
@@ -109,7 +110,11 @@ function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () 
         })}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-sidebar-foreground/60">Тема</span>
+          <ThemeToggle className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
+        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
@@ -133,11 +138,11 @@ export function AppSidebar({ role = "client" }: { role?: SidebarRole }) {
 export function MobileTopbar({ role = "client" }: { role?: SidebarRole }) {
   const [open, setOpen] = useState(false)
   return (
-    <header className="md:hidden sticky top-0 z-40 flex items-center justify-between gap-2 bg-sidebar text-sidebar-foreground px-4 h-14 border-b border-sidebar-border">
+    <header className="md:hidden sticky top-0 z-40 flex items-center justify-between gap-2 bg-sidebar text-sidebar-foreground px-2 h-14 border-b border-sidebar-border pt-safe">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           aria-label="Открыть меню"
-          className="p-2 -ml-2 rounded-md hover:bg-sidebar-accent transition-colors"
+          className="tap-target inline-flex items-center justify-center rounded-md hover:bg-sidebar-accent transition-colors"
         >
           <Menu className="h-5 w-5" />
         </SheetTrigger>
@@ -157,9 +162,12 @@ export function MobileTopbar({ role = "client" }: { role?: SidebarRole }) {
         />
         <span className="font-bold text-sm tracking-wide">МК ЛОГИСТИК</span>
       </div>
-      <span className="text-[11px] bg-[#D4512B]/20 text-[#EAC9B0] px-2 py-0.5 rounded">
-        {roleLabel(role)}
-      </span>
+      <div className="flex items-center gap-1">
+        <span className="text-[11px] bg-primary/20 text-secondary px-2 py-0.5 rounded-md font-medium">
+          {roleLabel(role)}
+        </span>
+        <ThemeToggle className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
+      </div>
     </header>
   )
 }

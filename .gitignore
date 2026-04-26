@@ -46,3 +46,11 @@ nginx/certbot/renewal/
 
 # Fonts (download separately)
 backend/app/fonts/
+
+# Playwright MCP artifacts (snapshots, console logs from browser automation)
+.playwright-mcp/
+
+# Local QA / debug screenshots in repo root
+/*.png
+/*.jpeg
+/*.jpg

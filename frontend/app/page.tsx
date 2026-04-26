@@ -1,125 +1,264 @@
 import Image from "next/image"
 import Link from "next/link"
+import {
+  Truck,
+  Package,
+  BarChart3,
+  Shield,
+  Clock,
+  CheckCircle,
+  ArrowRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Truck, Package, BarChart3, Shield, Clock, CheckCircle } from "lucide-react"
+import { Container } from "@/components/ui/container"
+import { Section, SectionHeader } from "@/components/ui/section"
+import {
+  H1,
+  H2,
+  H3,
+  Eyebrow,
+  Lead,
+  Muted,
+} from "@/components/ui/typography"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+
+const features = [
+  {
+    icon: Package,
+    title: "Удобное оформление",
+    desc: "Мастер заказа в 6 шагов — маркетплейс, склад, дата, коробки, забор, оплата",
+  },
+  {
+    icon: Clock,
+    title: "Расписание доставки",
+    desc: "Выбирайте дату из доступных слотов, система автоматически рассчитает дату прибытия",
+  },
+  {
+    icon: BarChart3,
+    title: "Контроль заказов",
+    desc: "Отслеживайте статус каждого заказа: от оформления до доставки на склад",
+  },
+  {
+    icon: CheckCircle,
+    title: "Онлайн-оплата",
+    desc: "Оплата через ЮKassa — банковская карта или СБП. Стикеры отправим автоматически",
+  },
+  {
+    icon: Shield,
+    title: "PDF стикеры",
+    desc: "Стикеры 58×40мм с QR-кодом для каждой коробки — готовы сразу после оплаты",
+  },
+  {
+    icon: Truck,
+    title: "Забор груза",
+    desc: "Нужен забор? Укажите адрес при оформлении — наш водитель приедет в срок",
+  },
+]
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-[#EAC9B0] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image
-            src="/brand/logo-mk-logistik.jpg"
-            alt="МК Логистик"
-            width={36}
-            height={36}
-            className="rounded-md"
-            priority
-          />
-          <span className="text-base sm:text-lg font-bold tracking-tight text-[#1A1A1A]">МК ЛОГИСТИК</span>
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link href="/login">
-            <Button variant="ghost" className="hover:text-[#D4512B] hover:bg-[#FBF0EA]">
-              Войти
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A] text-white font-medium">
-              Регистрация
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section
-        className="text-white py-16 sm:py-20 px-6"
-        style={{ background: "linear-gradient(180deg, #D4512B 0%, #B33D1A 100%)" }}
-      >
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
-          <div className="text-center lg:text-left">
-            <Badge className="bg-white/15 text-white mb-4 text-sm font-medium border-0 backdrop-blur-sm">
-              Доставка на склады WB и Ozon
-            </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-[1.1] tracking-tight">
-              Логистика для маркетплейсов<br />
-              <span className="text-[#EAC9B0]">просто и удобно</span>
-            </h1>
-            <p className="text-base sm:text-lg text-white/85 mb-7 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Оформляйте заказы на доставку грузов на склады Wildberries и Ozon онлайн.
-              Отслеживайте статусы, получайте стикеры и управляйте компанией в одном месте.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Link href="/register">
-                <Button size="lg" className="bg-white text-[#D4512B] hover:bg-[#FBF0EA] font-bold text-base px-7">
-                  Создать заказ
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* ====================== HEADER ====================== */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 supports-[backdrop-filter]:bg-background/70 backdrop-blur-md">
+        <Container size="wide">
+          <div className="flex items-center justify-between gap-3 h-16">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 -ml-1 px-1 rounded-md tap-target hover:bg-muted/60 transition-colors"
+            >
+              <Image
+                src="/brand/logo-mk-logistik.jpg"
+                alt="МК Логистик"
+                width={36}
+                height={36}
+                className="rounded-md ring-1 ring-border shadow-xs"
+                priority
+              />
+              <span className="text-sm sm:text-base font-bold tracking-tight text-foreground">
+                МК ЛОГИСТИК
+              </span>
+            </Link>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <ThemeToggle />
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  className="hidden sm:inline-flex h-10 px-4 text-sm tap-target"
+                >
+                  Войти
                 </Button>
               </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/15 bg-transparent text-base px-7">
-                  Войти в кабинет
+              <Link href="/register">
+                <Button className="h-10 px-4 sm:px-5 text-sm font-medium shadow-sm tap-target">
+                  <span className="hidden sm:inline">Регистрация</span>
+                  <span className="sm:hidden">Войти</span>
                 </Button>
               </Link>
             </div>
           </div>
-          <div className="hidden lg:flex justify-center">
-            <Image
-              src="/brand/illustration-warehouse.svg"
-              alt=""
-              width={520}
-              height={290}
-              className="rounded-2xl shadow-xl"
-              priority
-            />
+        </Container>
+      </header>
+
+      {/* ====================== HERO ======================
+          Brand surface — invariant к теме. Используем явный --brand
+          и text-white вместо токенов, чтобы выглядеть одинаково в light/dark.
+      */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] text-white">
+        {/* Декоративный background-узор */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.08] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 25% 30%, rgba(255,255,255,0.6) 0%, transparent 40%), radial-gradient(circle at 75% 70%, rgba(255,255,255,0.4) 0%, transparent 40%)",
+          }}
+        />
+        <Container size="wide" className="relative">
+          <div className="grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center py-16 sm:py-20 lg:py-28">
+            {/* Левая колонка — текст */}
+            <div className="text-center lg:text-left flex flex-col items-center lg:items-start gap-6">
+              <Badge
+                variant="outline"
+                className="bg-white/15 border-white/30 text-white backdrop-blur-sm px-3 py-1 text-xs sm:text-sm font-medium"
+              >
+                Доставка на склады WB и Ozon
+              </Badge>
+
+              <H1 className="!text-white max-w-2xl">
+                Логистика для маркетплейсов{" "}
+                <span className="text-[var(--brand-light)] block sm:inline">
+                  просто и удобно
+                </span>
+              </H1>
+
+              <Lead className="!text-white/85 max-w-xl">
+                Оформляйте заказы на доставку грузов на склады Wildberries
+                и Ozon онлайн. Отслеживайте статусы, получайте стикеры
+                и управляйте компанией в одном месте.
+              </Lead>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
+                <Link href="/register" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto h-12 px-7 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
+                  >
+                    Создать заказ
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Button>
+                </Link>
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto h-12 px-7 border-white/40 bg-white/5 text-white hover:bg-white/15 hover:text-white text-base tap-target"
+                  >
+                    Войти в кабинет
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Правая колонка — иллюстрация */}
+            <div className="hidden lg:flex justify-center">
+              <div className="relative rounded-3xl bg-[var(--brand-muted)] p-8 shadow-2xl ring-1 ring-white/20">
+                <Image
+                  src="/brand/illustration-warehouse.svg"
+                  alt=""
+                  width={520}
+                  height={290}
+                  className="rounded-2xl"
+                  priority
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </Container>
       </section>
 
-      {/* Features */}
-      <section className="py-16 px-6 bg-[#FBF0EA]">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-[#1A1A1A] mb-10">Всё что нужно для доставки</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: Package, title: "Удобное оформление", desc: "Мастер заказа в 6 шагов — маркетплейс, склад, дата, коробки, забор, оплата" },
-              { icon: Clock, title: "Расписание доставки", desc: "Выбирайте дату из доступных слотов, система автоматически рассчитает дату прибытия" },
-              { icon: BarChart3, title: "Контроль заказов", desc: "Отслеживайте статус каждого заказа: от оформления до доставки на склад" },
-              { icon: CheckCircle, title: "Онлайн-оплата", desc: "Оплата через ЮKassa — банковская карта или СБП. Стикеры отправим автоматически" },
-              { icon: Shield, title: "PDF стикеры", desc: "Стикеры 58×40мм с QR-кодом для каждой коробки — готовы сразу после оплаты" },
-              { icon: Truck, title: "Забор груза", desc: "Нужен забор? Укажите адрес при оформлении — наш водитель приедет в срок" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <Card key={title} className="border-[#EAC9B0] hover:shadow-md transition-shadow rounded-xl">
-                <CardContent className="pt-6">
-                  <div className="bg-[#FBF0EA] rounded-lg p-2 w-10 h-10 flex items-center justify-center mb-3">
-                    <Icon className="h-5 w-5 text-[#D4512B]" />
+      {/* ====================== FEATURES ====================== */}
+      <Section tone="muted" spacing="lg">
+        <Container>
+          <SectionHeader>
+            <Eyebrow>Возможности</Eyebrow>
+            <H2>Всё что нужно для доставки</H2>
+            <Lead>
+              Мы собрали в одном кабинете все инструменты — от расчёта
+              стоимости до выдачи QR-стикеров.
+            </Lead>
+          </SectionHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <Card
+                key={title}
+                className="group border-border bg-card rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-[var(--duration-base)]"
+              >
+                <CardContent className="p-6 flex flex-col gap-3">
+                  <div className="bg-primary/10 text-primary rounded-xl p-2.5 w-11 h-11 flex items-center justify-center transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
+                    <Icon className="size-5" aria-hidden />
                   </div>
-                  <h3 className="font-semibold text-[#1A1A1A] mb-1">{title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+                  <H3 className="text-lg sm:text-xl font-semibold">{title}</H3>
+                  <Muted>{desc}</Muted>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
+        </Container>
+      </Section>
+
+      {/* ====================== CTA ====================== */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] text-white py-20 sm:py-28">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6) 0%, transparent 50%)",
+          }}
+        />
+        <Container size="narrow" className="relative text-center">
+          <div className="flex flex-col items-center gap-4">
+            <H2 className="!text-white">Начните прямо сейчас</H2>
+            <Lead className="!text-white/85">
+              Регистрация занимает 1 минуту, без оплаты и обязательств
+            </Lead>
+            <Link href="/register" className="mt-3 w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto h-12 px-10 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
+              >
+                Зарегистрироваться бесплатно
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+            </Link>
+          </div>
+        </Container>
       </section>
 
-      {/* CTA */}
-      <section className="bg-[#D4512B] text-white py-14 px-6 text-center">
-        <h2 className="text-2xl font-bold mb-3">Начните прямо сейчас</h2>
-        <p className="text-white/80 mb-6">Регистрация занимает 1 минуту</p>
-        <Link href="/register">
-          <Button size="lg" className="bg-white text-[#D4512B] hover:bg-[#EAC9B0] font-bold px-10">
-            Зарегистрироваться бесплатно
-          </Button>
-        </Link>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-[#1A1A1A] text-white/60 py-6 px-6 text-center text-sm mt-auto">
-        <p>© 2026 МК Логистик. Доставка на склады Wildberries и Ozon.</p>
+      {/* ====================== FOOTER ====================== */}
+      <footer className="bg-sidebar text-sidebar-foreground/70 mt-auto">
+        <Container size="wide">
+          <div className="py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+            <p>© 2026 МК Логистик. Доставка на склады Wildberries и Ozon.</p>
+            <div className="flex items-center gap-5">
+              <Link
+                href="/login"
+                className="hover:text-sidebar-foreground transition-colors"
+              >
+                Войти
+              </Link>
+              <Link
+                href="/register"
+                className="hover:text-sidebar-foreground transition-colors"
+              >
+                Регистрация
+              </Link>
+            </div>
+          </div>
+        </Container>
       </footer>
     </div>
   )
