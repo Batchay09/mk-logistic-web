@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { HelpCircle } from "lucide-react"
 import { Container } from "@/components/ui/container"
@@ -10,6 +12,7 @@ import {
   AccordionTrigger,
   AccordionPanel,
 } from "@/components/ui/accordion"
+import { Reveal } from "@/components/ui/reveal"
 
 interface FaqEntry {
   q: string
@@ -55,35 +58,41 @@ export function Faq() {
   return (
     <Section tone="default" spacing="lg" id="faq">
       <Container size="narrow">
-        <SectionHeader>
-          <Eyebrow>Вопросы</Eyebrow>
-          <H2>Частые вопросы</H2>
-          <Lead>
-            Самое важное, что обычно спрашивают перед первой отправкой.
-            Не нашли ответ — напишите нам, ответим в течение часа.
-          </Lead>
-        </SectionHeader>
+        <Reveal>
+          <SectionHeader>
+            <Eyebrow>Вопросы</Eyebrow>
+            <H2>Частые вопросы</H2>
+            <Lead>
+              Самое важное, что обычно спрашивают перед первой отправкой.
+              Не нашли ответ — напишите нам, ответим в течение часа.
+            </Lead>
+          </SectionHeader>
+        </Reveal>
 
-        <Accordion>
-          {FAQ.map((item, i) => (
-            <AccordionItem key={i} value={String(i)}>
-              <AccordionTrigger>{item.q}</AccordionTrigger>
-              <AccordionPanel>{item.a}</AccordionPanel>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <Reveal>
+          <Accordion>
+            {FAQ.map((item, i) => (
+              <AccordionItem key={i} value={String(i)}>
+                <AccordionTrigger>{item.q}</AccordionTrigger>
+                <AccordionPanel>{item.a}</AccordionPanel>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </Reveal>
 
-        <div className="mt-10 flex flex-col items-center gap-3 text-center">
-          <div className="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
-            <HelpCircle className="size-5" aria-hidden />
+        <Reveal delay={0.1}>
+          <div className="mt-10 flex flex-col items-center gap-3 text-center">
+            <div className="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
+              <HelpCircle className="size-5" aria-hidden />
+            </div>
+            <Muted>Остались вопросы?</Muted>
+            <Link href="/support">
+              <Button variant="outline" size="lg" className="h-11 px-5 tap-target">
+                Написать в поддержку
+              </Button>
+            </Link>
           </div>
-          <Muted>Остались вопросы?</Muted>
-          <Link href="/support">
-            <Button variant="outline" size="lg" className="h-11 px-5 tap-target">
-              Написать в поддержку
-            </Button>
-          </Link>
-        </div>
+        </Reveal>
       </Container>
     </Section>
   )

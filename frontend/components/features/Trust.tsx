@@ -1,6 +1,9 @@
+"use client"
+
 import { Container } from "@/components/ui/container"
 import { Section } from "@/components/ui/section"
 import { Caption } from "@/components/ui/typography"
+import { Reveal } from "@/components/ui/reveal"
 import { cn } from "@/lib/utils"
 
 interface PartnerProps {
@@ -35,7 +38,7 @@ export function Trust() {
   return (
     <Section tone="default" spacing="sm" aria-label="Партнёры и оплата">
       <Container>
-        <div className="flex flex-col items-center gap-6 sm:gap-8 text-center">
+        <Reveal className="flex flex-col items-center gap-6 sm:gap-8 text-center" duration={0.5}>
           <Caption>Доставляем на склады • Принимаем оплату</Caption>
 
           <div
@@ -55,7 +58,7 @@ export function Trust() {
             <Partner name="ЮKassa" brandColor="#0BAB66" />
             <Partner name="СБП" brandColor="#2DA94F" />
           </div>
-        </div>
+        </Reveal>
       </Container>
     </Section>
   )

@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import {
   Boxes,
@@ -13,6 +15,7 @@ import { Section, SectionHeader } from "@/components/ui/section"
 import { Eyebrow, H2, Lead, Muted } from "@/components/ui/typography"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Reveal } from "@/components/ui/reveal"
 import { cn } from "@/lib/utils"
 
 interface PriceItem {
@@ -102,22 +105,27 @@ export function PricingTeaser() {
   return (
     <Section tone="default" spacing="lg" id="pricing">
       <Container>
-        <SectionHeader>
-          <Eyebrow>Цены</Eyebrow>
-          <H2>Прозрачные тарифы без сюрпризов</H2>
-          <Lead>
-            Стоимость зависит только от направления и количества — никаких
-            скрытых наценок. Полный расчёт занимает меньше минуты.
-          </Lead>
-        </SectionHeader>
+        <Reveal>
+          <SectionHeader>
+            <Eyebrow>Цены</Eyebrow>
+            <H2>Прозрачные тарифы без сюрпризов</H2>
+            <Lead>
+              Стоимость зависит только от направления и количества — никаких
+              скрытых наценок. Полный расчёт занимает меньше минуты.
+            </Lead>
+          </SectionHeader>
+        </Reveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
-          {PRICES.map((item) => (
-            <PriceCard key={item.label} item={item} />
+          {PRICES.map((item, i) => (
+            <Reveal key={item.label} delay={i * 0.08}>
+              <PriceCard item={item} />
+            </Reveal>
           ))}
         </div>
 
         {/* Advantages + CTA */}
+        <Reveal>
         <Card
           className={cn(
             "border-primary/20 bg-card rounded-2xl shadow-md",
@@ -159,6 +167,7 @@ export function PricingTeaser() {
             </div>
           </CardContent>
         </Card>
+        </Reveal>
       </Container>
     </Section>
   )

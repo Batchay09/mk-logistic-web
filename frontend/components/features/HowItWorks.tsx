@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Package,
   Calculator,
@@ -9,6 +11,7 @@ import {
 import { Container } from "@/components/ui/container"
 import { Section, SectionHeader } from "@/components/ui/section"
 import { Eyebrow, H2, H4, Lead, Muted } from "@/components/ui/typography"
+import { Reveal } from "@/components/ui/reveal"
 import { cn } from "@/lib/utils"
 
 interface Step {
@@ -109,14 +112,16 @@ export function HowItWorks() {
   return (
     <Section tone="default" spacing="lg" id="how-it-works">
       <Container>
-        <SectionHeader>
-          <Eyebrow>Как это работает</Eyebrow>
-          <H2>4 шага до доставки на склад</H2>
-          <Lead>
-            Не нужно звонить менеджеру и присылать таблицы — оформляйте,
-            рассчитывайте и отправляйте грузы прямо в браузере.
-          </Lead>
-        </SectionHeader>
+        <Reveal>
+          <SectionHeader>
+            <Eyebrow>Как это работает</Eyebrow>
+            <H2>4 шага до доставки на склад</H2>
+            <Lead>
+              Не нужно звонить менеджеру и присылать таблицы — оформляйте,
+              рассчитывайте и отправляйте грузы прямо в браузере.
+            </Lead>
+          </SectionHeader>
+        </Reveal>
 
         <div className="relative max-w-6xl mx-auto">
           {/* Соединительная линия — только на десктопе */}
@@ -176,9 +181,9 @@ export function HowItWorks() {
                 >
                   {i + 1}
                 </span>
-                <div className="sm:pl-0 pl-10">
+                <Reveal delay={i * 0.08} className="sm:pl-0 pl-10">
                   <StepCard step={step} index={i} />
-                </div>
+                </Reveal>
               </li>
             ))}
           </ol>

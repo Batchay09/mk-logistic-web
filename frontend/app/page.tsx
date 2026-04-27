@@ -23,6 +23,7 @@ import {
   Muted,
 } from "@/components/ui/typography"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { Reveal } from "@/components/ui/reveal"
 import { HowItWorks } from "@/components/features/HowItWorks"
 import { Trust } from "@/components/features/Trust"
 import { Faq } from "@/components/features/Faq"
@@ -123,50 +124,65 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center py-16 sm:py-20 lg:py-28">
             {/* Левая колонка — текст */}
             <div className="text-center lg:text-left flex flex-col items-center lg:items-start gap-6">
-              <Badge
-                variant="outline"
-                className="bg-white/15 border-white/30 text-white backdrop-blur-sm px-3 py-1 text-xs sm:text-sm font-medium"
-              >
-                Доставка на склады WB и Ozon
-              </Badge>
+              <Reveal initialOnMount duration={0.4}>
+                <Badge
+                  variant="outline"
+                  className="bg-white/15 border-white/30 text-white backdrop-blur-sm px-3 py-1 text-xs sm:text-sm font-medium"
+                >
+                  Доставка на склады WB и Ozon
+                </Badge>
+              </Reveal>
 
-              <H1 className="!text-white max-w-2xl">
-                Логистика для маркетплейсов{" "}
-                <span className="text-[var(--brand-light)] block sm:inline">
-                  просто и удобно
-                </span>
-              </H1>
+              <Reveal initialOnMount delay={0.08}>
+                <H1 className="!text-white max-w-2xl">
+                  Логистика для маркетплейсов{" "}
+                  <span className="text-[var(--brand-light)] block sm:inline">
+                    просто и удобно
+                  </span>
+                </H1>
+              </Reveal>
 
-              <Lead className="!text-white/85 max-w-xl">
-                Оформляйте заказы на доставку грузов на склады Wildberries
-                и Ozon онлайн. Отслеживайте статусы, получайте стикеры
-                и управляйте компанией в одном месте.
-              </Lead>
+              <Reveal initialOnMount delay={0.16}>
+                <Lead className="!text-white/85 max-w-xl">
+                  Оформляйте заказы на доставку грузов на склады Wildberries
+                  и Ozon онлайн. Отслеживайте статусы, получайте стикеры
+                  и управляйте компанией в одном месте.
+                </Lead>
+              </Reveal>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
-                <Link href="/register" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    className="w-full sm:w-auto h-12 px-7 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
-                  >
-                    Создать заказ
-                    <ArrowRight className="size-4" aria-hidden />
-                  </Button>
-                </Link>
-                <Link href="/login" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full sm:w-auto h-12 px-7 border-white/40 bg-white/5 text-white hover:bg-white/15 hover:text-white text-base tap-target"
-                  >
-                    Войти в кабинет
-                  </Button>
-                </Link>
-              </div>
+              <Reveal initialOnMount delay={0.24} className="w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
+                  <Link href="/register" className="w-full sm:w-auto">
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto h-12 px-7 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
+                    >
+                      Создать заказ
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Button>
+                  </Link>
+                  <Link href="/login" className="w-full sm:w-auto">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full sm:w-auto h-12 px-7 border-white/40 bg-white/5 text-white hover:bg-white/15 hover:text-white text-base tap-target"
+                    >
+                      Войти в кабинет
+                    </Button>
+                  </Link>
+                </div>
+              </Reveal>
             </div>
 
             {/* Правая колонка — иллюстрация */}
-            <div className="hidden lg:flex justify-center">
+            <Reveal
+              initialOnMount
+              direction="left"
+              distance={32}
+              delay={0.18}
+              duration={0.6}
+              className="hidden lg:flex justify-center"
+            >
               <div className="relative rounded-3xl bg-[var(--brand-muted)] p-8 shadow-2xl ring-1 ring-white/20">
                 <Image
                   src="/brand/illustration-warehouse.svg"
@@ -177,7 +193,7 @@ export default function LandingPage() {
                   priority
                 />
               </div>
-            </div>
+            </Reveal>
           </div>
         </Container>
       </section>
@@ -191,29 +207,30 @@ export default function LandingPage() {
       {/* ====================== FEATURES ====================== */}
       <Section tone="muted" spacing="lg">
         <Container>
-          <SectionHeader>
-            <Eyebrow>Возможности</Eyebrow>
-            <H2>Всё что нужно для доставки</H2>
-            <Lead>
-              Мы собрали в одном кабинете все инструменты — от расчёта
-              стоимости до выдачи QR-стикеров.
-            </Lead>
-          </SectionHeader>
+          <Reveal>
+            <SectionHeader>
+              <Eyebrow>Возможности</Eyebrow>
+              <H2>Всё что нужно для доставки</H2>
+              <Lead>
+                Мы собрали в одном кабинете все инструменты — от расчёта
+                стоимости до выдачи QR-стикеров.
+              </Lead>
+            </SectionHeader>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map(({ icon: Icon, title, desc }) => (
-              <Card
-                key={title}
-                className="group border-border bg-card rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-[var(--duration-base)]"
-              >
-                <CardContent className="p-6 flex flex-col gap-3">
-                  <div className="bg-primary/10 text-primary rounded-xl p-2.5 w-11 h-11 flex items-center justify-center transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Icon className="size-5" aria-hidden />
-                  </div>
-                  <H3 className="text-lg sm:text-xl font-semibold">{title}</H3>
-                  <Muted>{desc}</Muted>
-                </CardContent>
-              </Card>
+            {features.map(({ icon: Icon, title, desc }, i) => (
+              <Reveal key={title} delay={(i % 3) * 0.08}>
+                <Card className="group border-border bg-card rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-[var(--duration-base)]">
+                  <CardContent className="p-6 flex flex-col gap-3">
+                    <div className="bg-primary/10 text-primary rounded-xl p-2.5 w-11 h-11 flex items-center justify-center transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
+                      <Icon className="size-5" aria-hidden />
+                    </div>
+                    <H3 className="text-lg sm:text-xl font-semibold">{title}</H3>
+                    <Muted>{desc}</Muted>
+                  </CardContent>
+                </Card>
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -236,7 +253,7 @@ export default function LandingPage() {
           }}
         />
         <Container size="narrow" className="relative text-center">
-          <div className="flex flex-col items-center gap-4">
+          <Reveal className="flex flex-col items-center gap-4" duration={0.55}>
             <H2 className="!text-white">Начните прямо сейчас</H2>
             <Lead className="!text-white/85">
               Регистрация занимает 1 минуту, без оплаты и обязательств
@@ -250,7 +267,7 @@ export default function LandingPage() {
                 <ArrowRight className="size-4" aria-hidden />
               </Button>
             </Link>
-          </div>
+          </Reveal>
         </Container>
       </section>
 
