@@ -18,8 +18,8 @@ export function StepMarketplace({ state, update }: { state: WizardState; update:
           className={cn(
             "flex flex-col items-center justify-center gap-3 py-8 rounded-xl border-2 transition-all font-medium text-lg",
             state.marketplace === value
-              ? "border-[#D4512B] bg-[#FBF0EA] text-[#D4512B] shadow-md scale-105"
-              : "border-[#EAC9B0] hover:border-[#D4512B] hover:bg-[#FBF0EA]"
+              ? "border-primary bg-muted text-primary shadow-md scale-105"
+              : "border-border text-foreground hover:border-primary hover:bg-muted"
           )}
         >
           <span className="text-4xl">{emoji}</span>

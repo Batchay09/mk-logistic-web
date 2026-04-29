@@ -23,7 +23,7 @@ export function StepDestination({ state, update }: { state: WizardState; update:
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 gap-3 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin text-[#D4512B]" />
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
         Загружаем направления...
       </div>
     )
@@ -42,11 +42,11 @@ export function StepDestination({ state, update }: { state: WizardState; update:
           className={cn(
             "flex items-center gap-3 px-4 py-3 rounded-lg border-2 text-left transition-all",
             state.destination_id === dest.id
-              ? "border-[#D4512B] bg-[#FBF0EA] text-[#D4512B] font-medium"
-              : "border-[#EAC9B0] hover:border-[#D4512B] hover:bg-[#FBF0EA]"
+              ? "border-primary bg-muted text-primary font-medium"
+              : "border-border text-foreground hover:border-primary hover:bg-muted"
           )}
         >
-          <MapPin className={cn("h-4 w-4 shrink-0", state.destination_id === dest.id ? "text-[#D4512B]" : "text-muted-foreground")} />
+          <MapPin className={cn("h-4 w-4 shrink-0", state.destination_id === dest.id ? "text-primary" : "text-muted-foreground")} />
           <span className="text-sm">{dest.name}</span>
         </button>
       ))}

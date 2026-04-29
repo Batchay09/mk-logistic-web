@@ -22,7 +22,7 @@ export function StepDate({ state, update }: { state: WizardState; update: (p: Pa
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 gap-3 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin text-[#D4512B]" />
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
         Загружаем расписание...
       </div>
     )
@@ -41,12 +41,12 @@ export function StepDate({ state, update }: { state: WizardState; update: (p: Pa
           className={cn(
             "w-full flex items-center gap-3 px-4 py-3.5 rounded-lg border-2 text-left transition-all",
             state.ship_date === d.ship_date
-              ? "border-[#D4512B] bg-[#FBF0EA]"
-              : "border-[#EAC9B0] hover:border-[#D4512B] hover:bg-[#FBF0EA]"
+              ? "border-primary bg-muted"
+              : "border-border hover:border-primary hover:bg-muted"
           )}
         >
-          <CalendarDays className={cn("h-5 w-5 shrink-0", state.ship_date === d.ship_date ? "text-[#D4512B]" : "text-muted-foreground")} />
-          <span className={cn("text-sm font-medium", state.ship_date === d.ship_date ? "text-[#D4512B]" : "")}>
+          <CalendarDays className={cn("h-5 w-5 shrink-0", state.ship_date === d.ship_date ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-sm font-medium", state.ship_date === d.ship_date ? "text-primary" : "text-foreground")}>
             {d.label}
           </span>
         </button>

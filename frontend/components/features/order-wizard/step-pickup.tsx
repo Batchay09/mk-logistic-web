@@ -21,8 +21,8 @@ export function StepPickup({ state, update }: { state: WizardState; update: (p: 
           className={cn(
             "flex flex-col items-center gap-2 py-5 rounded-xl border-2 transition-all",
             !state.service_pickup
-              ? "border-[#D4512B] bg-[#FBF0EA] text-[#D4512B]"
-              : "border-[#EAC9B0] hover:border-[#D4512B]"
+              ? "border-primary bg-muted text-primary"
+              : "border-border text-foreground hover:border-primary"
           )}
         >
           <Package className="h-7 w-7" />
@@ -33,8 +33,8 @@ export function StepPickup({ state, update }: { state: WizardState; update: (p: 
           className={cn(
             "flex flex-col items-center gap-2 py-5 rounded-xl border-2 transition-all",
             state.service_pickup
-              ? "border-[#D4512B] bg-[#FBF0EA] text-[#D4512B]"
-              : "border-[#EAC9B0] hover:border-[#D4512B]"
+              ? "border-primary bg-muted text-primary"
+              : "border-border text-foreground hover:border-primary"
           )}
         >
           <Truck className="h-7 w-7" />
@@ -44,11 +44,11 @@ export function StepPickup({ state, update }: { state: WizardState; update: (p: 
       </div>
 
       {state.service_pickup && (
-        <div className="space-y-3 border border-[#EAC9B0] rounded-lg p-4 bg-[#FBF0EA]">
+        <div className="space-y-3 border border-border rounded-lg p-4 bg-muted">
           <div>
-            <Label className="text-sm">Город</Label>
+            <Label className="text-sm text-foreground">Город</Label>
             <Select value={state.pickup_city} onValueChange={(v) => v && update({ pickup_city: v })}>
-              <SelectTrigger className="mt-1 border-[#EAC9B0]">
+              <SelectTrigger className="mt-1 border-border bg-background">
                 <SelectValue placeholder="Выберите город" />
               </SelectTrigger>
               <SelectContent>
@@ -57,27 +57,27 @@ export function StepPickup({ state, update }: { state: WizardState; update: (p: 
             </Select>
           </div>
           <div>
-            <Label className="text-sm">Улица</Label>
+            <Label className="text-sm text-foreground">Улица</Label>
             <Input
-              className="mt-1 border-[#EAC9B0]"
+              className="mt-1 border-border bg-background text-foreground"
               placeholder="ул. Ленина"
               value={state.pickup_street}
               onChange={(e) => update({ pickup_street: e.target.value })}
             />
           </div>
           <div>
-            <Label className="text-sm">Дом / Офис</Label>
+            <Label className="text-sm text-foreground">Дом / Офис</Label>
             <Input
-              className="mt-1 border-[#EAC9B0]"
+              className="mt-1 border-border bg-background text-foreground"
               placeholder="12А"
               value={state.pickup_house}
               onChange={(e) => update({ pickup_house: e.target.value })}
             />
           </div>
           <div>
-            <Label className="text-sm">Комментарий (необязательно)</Label>
+            <Label className="text-sm text-foreground">Комментарий (необязательно)</Label>
             <Input
-              className="mt-1 border-[#EAC9B0]"
+              className="mt-1 border-border bg-background text-foreground"
               placeholder="Въезд со двора, склад №2"
               value={state.pickup_comment}
               onChange={(e) => update({ pickup_comment: e.target.value })}

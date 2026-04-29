@@ -124,7 +124,7 @@ export default function NewOrderPage() {
   return (
     <LayoutWithSidebar role="client">
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Новый заказ</h1>
+        <h1 className="text-2xl font-bold text-foreground">Новый заказ</h1>
 
         {/* Progress */}
         <div className="flex items-center gap-1">
@@ -132,28 +132,28 @@ export default function NewOrderPage() {
             <div key={i} className="flex items-center flex-1">
               <div className="flex flex-col items-center gap-1 flex-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  i < step ? "bg-[#D4512B] text-white" :
-                  i === step ? "bg-[#D4512B] text-white ring-2 ring-[#D4512B] ring-offset-2" :
-                  "bg-[#EAC9B0] text-[#D4512B]"
+                  i < step ? "bg-primary text-white" :
+                  i === step ? "bg-primary text-white ring-2 ring-primary ring-offset-2 ring-offset-background" :
+                  "bg-secondary text-primary"
                 }`}>
                   {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
                 </div>
-                <span className={`text-xs hidden sm:block ${i === step ? "text-[#D4512B] font-medium" : "text-muted-foreground"}`}>
+                <span className={`text-xs hidden sm:block ${i === step ? "text-primary font-medium" : "text-muted-foreground"}`}>
                   {label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 flex-1 mx-1 rounded transition-colors ${i < step ? "bg-[#D4512B]" : "bg-[#EAC9B0]"}`} />
+                <div className={`h-0.5 flex-1 mx-1 rounded transition-colors ${i < step ? "bg-primary" : "bg-secondary"}`} />
               )}
             </div>
           ))}
         </div>
 
         {/* Step content */}
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Badge className="bg-[#D4512B] text-white">{step + 1}/{STEPS.length}</Badge>
+            <CardTitle className="text-lg flex items-center gap-2 text-foreground">
+              <Badge className="bg-primary text-white">{step + 1}/{STEPS.length}</Badge>
               {STEPS[step]}
             </CardTitle>
           </CardHeader>
@@ -168,7 +168,6 @@ export default function NewOrderPage() {
             variant="outline"
             onClick={() => setStep((s) => s - 1)}
             disabled={step === 0}
-            className="border-[#EAC9B0]"
           >
             <ChevronLeft className="h-4 w-4 mr-1" /> Назад
           </Button>
@@ -176,7 +175,6 @@ export default function NewOrderPage() {
             <Button
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext()}
-              className="bg-[#D4512B] hover:bg-[#B33D1A]"
             >
               Далее <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -184,7 +182,6 @@ export default function NewOrderPage() {
             <Button
               onClick={handleSubmit}
               disabled={submitting}
-              className="bg-[#D4512B] hover:bg-[#B33D1A]"
             >
               {submitting ? "Добавляем..." : "Добавить в корзину"}
             </Button>

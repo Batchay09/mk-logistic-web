@@ -17,7 +17,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm py-1.5">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right max-w-[55%]">{value}</span>
+      <span className="font-medium text-foreground text-right max-w-[55%]">{value}</span>
     </div>
   )
 }
@@ -50,7 +50,7 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
 
   return (
     <div className="space-y-4">
-      <div className="space-y-0.5 border border-[#EAC9B0] rounded-lg divide-y divide-[#EAC9B0]">
+      <div className="space-y-0.5 border border-border rounded-lg divide-y divide-border">
         <div className="px-4 py-1">
           <Row label="Маркетплейс" value={MP_LABELS[state.marketplace] || state.marketplace} />
         </div>
@@ -71,10 +71,10 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
       </div>
 
       <div>
-        <Label className="text-sm">Компания для стикера</Label>
+        <Label className="text-sm text-foreground">Компания для стикера</Label>
         {hasCompanies && (
           <select
-            className="mt-1 w-full h-9 rounded-md border border-[#EAC9B0] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4512B]/30"
+            className="mt-1 w-full h-9 rounded-md border border-border bg-background text-foreground px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={companies?.find((c) => c.company_name === state.company_name) ? state.company_name : ""}
             onChange={(e) => update({ company_name: e.target.value })}
           >
@@ -85,36 +85,36 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
           </select>
         )}
         <Input
-          className="mt-2 border-[#EAC9B0]"
+          className="mt-2 border-border bg-background text-foreground"
           placeholder="Ваша компания или ИП (необязательно)"
           value={state.company_name}
           onChange={(e) => update({ company_name: e.target.value })}
         />
       </div>
 
-      <Separator className="bg-[#EAC9B0]" />
+      <Separator className="bg-border" />
 
-      <div className="space-y-1 bg-[#FBF0EA] rounded-lg p-4 border border-[#EAC9B0]">
+      <div className="space-y-1 bg-muted rounded-lg p-4 border border-border">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Доставка</span>
-          <span>{state.price_delivery.toLocaleString("ru-RU")} ₽</span>
+          <span className="text-foreground">{state.price_delivery.toLocaleString("ru-RU")} ₽</span>
         </div>
         {state.service_pickup && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Забор груза</span>
-            <span>500 ₽</span>
+            <span className="text-foreground">500 ₽</span>
           </div>
         )}
         {state.service_palletizing && state.price_palletizing > 0 && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Паллетизация</span>
-            <span>{state.price_palletizing.toLocaleString("ru-RU")} ₽</span>
+            <span className="text-foreground">{state.price_palletizing.toLocaleString("ru-RU")} ₽</span>
           </div>
         )}
-        <Separator className="bg-[#EAC9B0] my-2" />
+        <Separator className="bg-border my-2" />
         <div className="flex justify-between font-bold text-base">
-          <span>ИТОГО</span>
-          <span className="text-[#D4512B]">{total.toLocaleString("ru-RU")} ₽</span>
+          <span className="text-foreground">ИТОГО</span>
+          <span className="text-primary">{total.toLocaleString("ru-RU")} ₽</span>
         </div>
       </div>
     </div>
