@@ -27,46 +27,63 @@ mk-logistic-web/
 │   ├── app/
 │   │   ├── api/           # роутеры: auth, client, manager, admin, calculator, payments, stickers
 │   │   ├── core/          # config.py, security.py, dependencies.py
-│   │   ├── db/            # models.py, session.py
-│   │   └── services/      # calculator, sticker, audit, reports, email (реюз из бота)
+│   │   ├── db/            # base.py, models.py, session.py
+│   │   ├── schemas/       # Pydantic схемы (request/response)
+│   │   ├── services/      # calculator, sticker, audit, reports, email (реюз из бота)
+│   │   ├── templates/     # Jinja2 шаблоны для email и PDF
+│   │   └── main.py
 │   ├── migrations/        # Alembic (versions/0001_initial_schema, 0002_add_email_auth)
 │   └── requirements.txt
-├── frontend/              # Next.js 15
+├── frontend/              # Next.js 15 (см. frontend/CLAUDE.md)
 │   ├── app/               # App Router страницы
 │   ├── components/        # ui/ (shadcn), features/, layout/
-│   └── lib/               # api.ts, auth.ts
+│   ├── lib/               # api.ts, auth.ts, utils.ts
+│   └── middleware.ts      # cookie-проверка + редирект на /login
 ├── nginx/nginx.conf       # reverse proxy
-├── docker-compose.yml
-├── deploy.sh
+├── docker-compose.yml         # production-стенд (Postgres внешняя сеть mk-shared)
+├── docker-compose.local.yml   # локальный стенд (свой Postgres)
+├── run-local.sh           # быстрый запуск на SQLite без Docker
+├── deploy.sh              # rsync + docker compose up на VPS
 └── .env.example
 ```
 
 ## Основные команды
 
 ```bash
-# Backend локально
+# Самый быстрый локальный запуск (SQLite, без Docker)
+./run-local.sh
+#  → backend на :8001, frontend на :3000, миграции применятся автоматически
+
+# Локальный стенд на Postgres через Docker
+docker compose -f docker-compose.local.yml --env-file .env.local up --build
+
+# Backend вручную (если нужна изоляция или отладка)
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload --port 8001
 
-# Frontend локально
+# Frontend вручную
 cd frontend
-npm install
-npm run dev      # http://localhost:3000
+npm install --legacy-peer-deps
+npm run dev          # dev-сервер
+npm run build        # production build
+npm run lint         # ESLint
+npx tsc --noEmit     # TypeScript без компиляции
 
-# TypeScript проверка
-cd frontend && npx tsc --noEmit
-
-# Линтинг backend
+# Линтинг / типизация backend
 cd backend && ruff check . && mypy .
 
-# Полный стек через Docker
-docker compose up --build
+# Новая Alembic-миграция при изменении app/db/models.py
+cd backend && alembic revision --autogenerate -m "описание"
+alembic upgrade head
 
-# Деплой на VPS (требует sshpass: brew install sshpass)
-./deploy.sh
+# Staging деплой на VPS (mk.da-net.net)
+bash deploy-staging.sh
+# По умолчанию использует SSH-ключ через alias `mk-vps` из ~/.ssh/config
+# (нужно один раз: ssh-add --apple-use-keychain ~/.ssh/id_ed25519)
+# Fallback: SSHPASS='...' bash deploy-staging.sh — если ключ не настроен
 ```
 
 ## База данных
@@ -104,6 +121,17 @@ docker compose up --build
 | `manager` | `/manager/*` (платежи, поиск, отчёты) |
 | `admin` | `/admin/*` (пользователи, направления, тарифы, расписание, аудит) |
 
+### Как создать admin / manager
+
+**Bootstrap при старте бэкенда** (`backend/app/db/bootstrap.py`):
+- `ADMIN_EMAIL` + `ADMIN_PASSWORD` → создаёт юзера с ролью admin (или повышает существующего)
+- `MANAGER_EMAIL` + `MANAGER_PASSWORD` → создаёт юзера с ролью manager
+- `MANAGER_EMAILS` (CSV) → повышает уже зарегистрированных до manager (без создания)
+- Не понижает existing admin'ов автоматически
+
+**Дальше — через UI**: `/admin/users` → карандаш → select роли → сохранить
+(`PATCH /admin/users/{id}/role`).
+
 ## Сервисы (реюз из бота 1:1)
 
 - `calculator.py` — `CalculatorService.calculate_price()`, `SchedulerService.get_available_dates()`. Паллетизация >= 11 коробок (`BOXES_PER_PALLET = 11`).
@@ -119,27 +147,35 @@ docker compose up --build
 - **httpOnly cookie** secure=True только в production (`settings.is_production`)
 - **Docker сеть** — `mk-web` (внутренняя) + `mk-shared` (external, общая с ботом для PostgreSQL)
 - **Next.js standalone** — `output: "standalone"` в `next.config.ts` для минимального Docker-образа
+- **Email best-effort** — `services/email.py::_send` глотает SMTP-ошибки и логирует warning. Бизнес-операции (заказ, оплата) не падают если SMTP не настроен или недоступен. Хосты с `example.com`/`localhost` пропускаются как заглушки.
+- **Дизайн-система через токены** — никакого хардкода цветов в коде (`bg-[#D4512B]` ❌). Используем `bg-primary`, `text-foreground`, `border-border` — они автоматически адаптируются к light/dark теме. Полная справка → `frontend/DESIGN_SYSTEM.md`.
 
 ## Переменные окружения (.env)
+
+Полный шаблон → `.env.example`. Ключевые блоки:
 
 ```
 DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/mk_logistic
 SECRET_KEY=
 
+# SMTP — необязательны (best-effort). example.com → пропускается как заглушка.
 SMTP_HOST=smtp.yandex.ru
-SMTP_PORT=465
 SMTP_USER=
 SMTP_PASSWORD=
-SMTP_FROM=
+EMAIL_FROM=
 
 YOOKASSA_SHOP_ID=
 YOOKASSA_SECRET_KEY=
 
 APP_URL=https://mk-logistic.ru
-MANAGER_EMAILS=manager@example.com
 
-ADMIN_EMAIL=
+# Bootstrap admin/manager при старте бэкенда
+ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=
+MANAGER_EMAIL=manager@example.com
+MANAGER_PASSWORD=
+# CSV — повышает уже зарегистрированных до manager и шлёт уведомления
+MANAGER_EMAILS=manager@example.com
 ```
 
 ## Следующие шаги

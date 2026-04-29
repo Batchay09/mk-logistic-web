@@ -89,13 +89,19 @@ mk-logistic-web/
 
 ## Деплой
 
+**Staging стенд** (`mk.da-net.net`):
+
 ```bash
-./deploy.sh
+bash deploy-staging.sh
 ```
 
-Скрипт делает rsync на VPS (`89.111.142.70:/opt/mk-logistic-web`) → `docker compose up -d --build`. Требует `sshpass` (`brew install sshpass`).
+Скрипт делает rsync на VPS (`89.111.142.70:/opt/mk-logistic-test`) → `docker compose up -d --build`.
 
-**Перед первым деплоем** — заполнить `.env` на VPS (см. `.env.example`), купить домен, настроить HTTPS в `nginx/nginx.conf`.
+Аутентификация — через SSH-ключ (`~/.ssh/id_ed25519` + alias `mk-vps` в `~/.ssh/config`). На macOS один раз: `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` — паспрейза сохраняется в Keychain. Дальше деплой без пароля.
+
+Fallback (если ключ не настроен): `SSHPASS='...' bash deploy-staging.sh` — потребует `sshpass` (`brew install sshpass`).
+
+**Перед первым деплоем** — заполнить `.env.staging` (см. `.env.example`). HTTPS уже настроен через Letsencrypt.
 
 ---
 
