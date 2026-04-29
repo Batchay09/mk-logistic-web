@@ -20,9 +20,6 @@ import { cn } from "@/lib/utils"
 
 interface PriceItem {
   icon: LucideIcon
-  prefix?: string
-  amount: string
-  unit: string
   label: string
   hint: string
 }
@@ -30,33 +27,25 @@ interface PriceItem {
 const PRICES: PriceItem[] = [
   {
     icon: Boxes,
-    prefix: "от",
-    amount: "89",
-    unit: "₽",
-    label: "за коробку",
-    hint: "Поштучная отправка для небольших партий",
+    label: "Поштучная отправка",
+    hint: "Подходит для небольших партий — оплата за каждую коробку",
   },
   {
     icon: Layers,
-    prefix: "от",
-    amount: "690",
-    unit: "₽",
-    label: "за паллет",
-    hint: "Автоматически от 11 коробок — выгоднее",
+    label: "Паллетная отправка",
+    hint: "Автоматически паллетизируем при 11 и более коробках",
   },
   {
     icon: Truck,
-    amount: "0",
-    unit: "₽",
-    label: "забор груза",
-    hint: "Бесплатно по Москве при заказе от 10 коробок",
+    label: "Забор груза",
+    hint: "Можем забрать груз — указываете адрес при оформлении",
   },
 ]
 
 const ADVANTAGES = [
-  "Расчёт за 30 секунд — без звонка менеджеру",
-  "Видите итог до оплаты, без скрытых комиссий",
-  "Скидки при регулярной отправке — обсудим лично",
+  "Расчёт прямо в кабинете — без звонка менеджеру",
+  "Цена видна на этапе оформления, до оплаты",
+  "Тариф зависит от направления и количества — без неожиданностей",
 ]
 
 interface PriceCardProps {
@@ -78,22 +67,10 @@ function PriceCard({ item }: PriceCardProps) {
           <Icon className="size-6" aria-hidden />
         </div>
 
-        <div className="flex items-baseline gap-1.5">
-          {item.prefix && (
-            <span className="text-sm font-medium text-muted-foreground">
-              {item.prefix}
-            </span>
-          )}
-          <span className="font-heading text-4xl sm:text-5xl font-bold tracking-tight tabular-nums text-foreground leading-none">
-            {item.amount}
-          </span>
-          <span className="text-2xl font-bold text-foreground/80">
-            {item.unit}
-          </span>
-        </div>
-
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground">{item.label}</p>
+        <div className="space-y-1.5">
+          <p className="font-heading text-xl sm:text-2xl font-bold text-foreground leading-tight">
+            {item.label}
+          </p>
           <Muted>{item.hint}</Muted>
         </div>
       </CardContent>
@@ -107,11 +84,11 @@ export function PricingTeaser() {
       <Container>
         <Reveal>
           <SectionHeader>
-            <Eyebrow>Цены</Eyebrow>
-            <H2>Прозрачные тарифы без сюрпризов</H2>
+            <Eyebrow>Тарифы</Eyebrow>
+            <H2>Как считается стоимость</H2>
             <Lead>
-              Стоимость зависит только от направления и количества — никаких
-              скрытых наценок. Полный расчёт занимает меньше минуты.
+              Стоимость зависит от направления и количества коробок.
+              Точный расчёт — в кабинете при оформлении заказа.
             </Lead>
           </SectionHeader>
         </Reveal>
