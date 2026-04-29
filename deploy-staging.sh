@@ -1,31 +1,34 @@
 #!/usr/bin/env bash
 # Deploy MK Logistic Web — STAGING стенд (mk.da-net.net)
 # Изолированный от prod-бота: свой Postgres, своя сеть, nginx на 80.
+#
+# Аутентификация: SSH-ключ через alias `mk-vps` из ~/.ssh/config.
+# Если ключ не настроен — fallback на sshpass с переменной SSHPASS.
 
 set -e
 
-VPS_IP="89.111.142.70"
-VPS_USER="root"
+VPS_HOST="mk-vps"           # alias из ~/.ssh/config (с ControlMaster и id_ed25519)
 VPS_DIR="/opt/mk-logistic-test"
-SSH_OPTS="-o StrictHostKeyChecking=no -o PreferredAuthentications=password"
 
-echo "==> 🚀 Staging deploy → $VPS_USER@$VPS_IP:$VPS_DIR"
-echo "==> Домен: http://mk.da-net.net"
-
-# 0) sshpass check
-if ! command -v sshpass &>/dev/null; then
-    echo "❌ Установи sshpass: brew install sshpass"
-    exit 1
-fi
-
-# 1) Пароль — из env SSHPASS или интерактивно
-if [ -z "${SSHPASS:-}" ]; then
-    read -rsp "🔑 SSH пароль ($VPS_USER@$VPS_IP): " SSHPASS
-    echo
+# Если SSHPASS задан — используем sshpass (старый режим). Иначе — чистый ssh с ключом.
+if [ -n "${SSHPASS:-}" ] && command -v sshpass &>/dev/null; then
     export SSHPASS
+    SSH="sshpass -e ssh -o StrictHostKeyChecking=no"
+    SCP="sshpass -e scp -o StrictHostKeyChecking=no"
+    RSYNC_E="sshpass -e ssh -o StrictHostKeyChecking=no"
+    AUTH_MODE="sshpass"
+else
+    SSH="ssh"
+    SCP="scp"
+    RSYNC_E="ssh"
+    AUTH_MODE="ssh-key"
 fi
 
-# 2) Локальные файлы должны быть на месте
+echo "==> 🚀 Staging deploy → $VPS_HOST:$VPS_DIR"
+echo "==> Домен: http://mk.da-net.net"
+echo "==> Auth: $AUTH_MODE"
+
+# Локальные файлы должны быть на месте
 for f in .env.staging docker-compose.staging.yml nginx/nginx.staging.conf; do
     if [ ! -f "$f" ]; then
         echo "❌ Не найден $f — он требуется для staging-деплоя"
@@ -33,13 +36,13 @@ for f in .env.staging docker-compose.staging.yml nginx/nginx.staging.conf; do
     fi
 done
 
-# 3) Создаём папку на VPS
+# 1) Создаём папку на VPS
 echo "==> 📂 Готовим папку на сервере..."
-sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_IP" "mkdir -p $VPS_DIR"
+$SSH "$VPS_HOST" "mkdir -p $VPS_DIR"
 
-# 4) Синхронизируем код (без секретов и build-артефактов)
+# 2) Синхронизируем код (без секретов и build-артефактов)
 echo "==> 📤 rsync исходников..."
-sshpass -e rsync -az --delete \
+rsync -az --delete \
     --exclude='.git/' \
     --exclude='node_modules/' \
     --exclude='.next/' \
@@ -55,17 +58,17 @@ sshpass -e rsync -az --delete \
     --exclude='*.png' \
     --exclude='*.jpeg' \
     --exclude='.playwright-mcp/' \
-    -e "ssh $SSH_OPTS" \
-    ./ "$VPS_USER@$VPS_IP:$VPS_DIR/"
+    -e "$RSYNC_E" \
+    ./ "$VPS_HOST:$VPS_DIR/"
 
-# 5) Кладём staging-конфиги под нужными именами на сервере
+# 3) Кладём staging-конфиги под нужными именами на сервере
 echo "==> 📋 Кладу .env и docker-compose..."
-sshpass -e scp $SSH_OPTS .env.staging "$VPS_USER@$VPS_IP:$VPS_DIR/.env"
-sshpass -e scp $SSH_OPTS docker-compose.staging.yml "$VPS_USER@$VPS_IP:$VPS_DIR/docker-compose.yml"
+$SCP .env.staging "$VPS_HOST:$VPS_DIR/.env"
+$SCP docker-compose.staging.yml "$VPS_HOST:$VPS_DIR/docker-compose.yml"
 
-# 6) Запуск docker compose
+# 4) Запуск docker compose
 echo "==> 🐳 docker compose build & up..."
-sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_IP" "
+$SSH "$VPS_HOST" "
     set -e
     cd $VPS_DIR
     docker compose down --remove-orphans 2>/dev/null || true
@@ -78,4 +81,4 @@ sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_IP" "
 echo
 echo "==> ✅ Deploy завершён"
 echo "==> 🌐 Открой:  http://mk.da-net.net"
-echo "==> 📜 Логи:    sshpass -p \$SSHPASS ssh $VPS_USER@$VPS_IP 'cd $VPS_DIR && docker compose logs -f'"
+echo "==> 📜 Логи:    ssh $VPS_HOST 'cd $VPS_DIR && docker compose logs -f'"
