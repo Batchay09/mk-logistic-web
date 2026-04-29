@@ -157,7 +157,7 @@ export default function LandingPage() {
                       size="lg"
                       className="w-full sm:w-auto h-12 px-7 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
                     >
-                      Создать заказ
+                      Регистрация
                       <ArrowRight className="size-4" aria-hidden />
                     </Button>
                   </Link>
@@ -167,7 +167,7 @@ export default function LandingPage() {
                       variant="outline"
                       className="w-full sm:w-auto h-12 px-7 border-white/40 bg-white/5 text-white hover:bg-white/15 hover:text-white text-base tap-target"
                     >
-                      Войти в кабинет
+                      Войти
                     </Button>
                   </Link>
                 </div>

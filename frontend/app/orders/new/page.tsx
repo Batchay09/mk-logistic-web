@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
@@ -67,6 +68,7 @@ const STEPS = ["Маркетплейс", "Направление", "Дата", "
 
 export default function NewOrderPage() {
   const router = useRouter()
+  const qc = useQueryClient()
   const [step, setStep] = useState(0)
   const [state, setState] = useState<WizardState>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
@@ -103,6 +105,12 @@ export default function NewOrderPage() {
           ? { city: state.pickup_city, street: state.pickup_street, house: state.pickup_house, comment: state.pickup_comment || undefined }
           : undefined,
       })
+      // Инвалидируем кэш корзины и заказов, чтобы /cart и /dashboard
+      // подтянули свежие данные при заходе.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["cart"] }),
+        qc.invalidateQueries({ queryKey: ["orders"] }),
+      ])
       toast.success("Заказ добавлен в корзину!")
       router.push("/cart")
     } catch (e: unknown) {
