@@ -1,4 +1,5 @@
 """Email-уведомления через Yandex SMTP (замена Telegram-уведомлений)"""
+import logging
 import ssl
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -9,11 +10,35 @@ import aiosmtplib
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
 
-async def _send(to: List[str], subject: str, html: str, attachments: Optional[List[tuple]] = None) -> None:
-    """attachments: list of (filename, bytes)"""
+# Хосты, которые считаются заглушкой (staging/dev): не пытаемся к ним коннектиться.
+_STUB_HOSTS = ("example.com", "example.org", "localhost")
+
+
+def _smtp_configured() -> bool:
+    """SMTP считается настроенным, если есть креды и host не похож на заглушку."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        return  # silently skip if SMTP not configured
+        return False
+    host = (settings.SMTP_HOST or "").lower()
+    return not any(stub in host for stub in _STUB_HOSTS)
+
+
+async def _send(
+    to: List[str],
+    subject: str,
+    html: str,
+    attachments: Optional[List[tuple]] = None,
+) -> None:
+    """Отправить email. Никогда не пробрасывает SMTP-ошибки наружу:
+    уведомления — best-effort, бизнес-операции (заказ, оплата) не должны падать
+    из-за временных проблем со связью или незаконфигуренного SMTP.
+    attachments: list of (filename, bytes)
+    """
+    if not _smtp_configured():
+        logger.info("SMTP не настроен (host=%s) — пропуск '%s' для %s",
+                    settings.SMTP_HOST, subject, to)
+        return
 
     msg = MIMEMultipart("mixed")
     msg["From"] = settings.EMAIL_FROM
@@ -28,15 +53,19 @@ async def _send(to: List[str], subject: str, html: str, attachments: Optional[Li
             msg.attach(part)
 
     context = ssl.create_default_context()
-    await aiosmtplib.send(
-        msg,
-        hostname=settings.SMTP_HOST,
-        port=settings.SMTP_PORT,
-        use_tls=True,
-        tls_context=context,
-        username=settings.SMTP_USER,
-        password=settings.SMTP_PASSWORD,
-    )
+    try:
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            use_tls=True,
+            tls_context=context,
+            username=settings.SMTP_USER,
+            password=settings.SMTP_PASSWORD,
+        )
+    except (aiosmtplib.errors.SMTPException, OSError) as exc:
+        # OSError ловит DNS-резолюшен (gaierror) и сетевые сбои.
+        logger.warning("SMTP send failed for '%s' to %s: %s", subject, to, exc)
 
 
 async def send_verification_email(to: str, token: str) -> None:
@@ -83,7 +112,11 @@ async def notify_managers_new_order(order_ids: List[int], client_name: str, tota
     await _send(settings.manager_email_list, f"Новый заказ {ids_str} — МК Логистик", html)
 
 
-async def notify_client_payment_confirmed(to: str, order_id: int, pdf_bytes: Optional[bytes] = None) -> None:
+async def notify_client_payment_confirmed(
+    to: str,
+    order_id: int,
+    pdf_bytes: Optional[bytes] = None,
+) -> None:
     attachments = [(f"stickers_order_{order_id}.pdf", pdf_bytes)] if pdf_bytes else None
     html = f"""
     <h2>Оплата подтверждена — МК Логистик</h2>
@@ -96,7 +129,8 @@ async def notify_client_payment_confirmed(to: str, order_id: int, pdf_bytes: Opt
 async def notify_client_order_canceled(to: str, order_id: int) -> None:
     html = f"""
     <h2>Заказ отменён — МК Логистик</h2>
-    <p>Ваш заказ <b>#{order_id}</b> был отменён менеджером. Свяжитесь с нами для уточнения деталей.</p>
+    <p>Ваш заказ <b>#{order_id}</b> был отменён менеджером.
+       Свяжитесь с нами для уточнения деталей.</p>
     """
     await _send([to], f"Заказ #{order_id} отменён — МК Логистик", html)
 
