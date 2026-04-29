@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -36,11 +37,17 @@ class Settings(BaseSettings):
     APP_URL: str = "http://localhost:3000"
     API_URL: str = "http://localhost:8001"
 
-    # Manager notification emails (comma-separated)
+    # Manager notification emails (comma-separated, only for email alerts)
     MANAGER_EMAILS: str = ""
 
     # Admin telegram IDs (for cross-compatibility with bot)
     ADMIN_TG_IDS: str = ""
+
+    # Bootstrap users (создаются/повышаются при старте через `python -m app.db.bootstrap`)
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
+    MANAGER_EMAIL: str = ""
+    MANAGER_PASSWORD: str = ""
 
     @property
     def database_url(self) -> str:

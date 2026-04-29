@@ -21,7 +21,10 @@ services:
     restart: unless-stopped
     env_file: .env
     command: >
-      sh -c "alembic upgrade head && python -m app.db.seeds && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+      sh -c "alembic upgrade head &&
+             python -m app.db.bootstrap &&
+             python -m app.db.seeds &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
     depends_on:
       - db
     networks:
