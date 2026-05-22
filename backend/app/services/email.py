@@ -1,9 +1,11 @@
-"""Email-уведомления через Yandex SMTP (замена Telegram-уведомлений)"""
+"""Email-уведомления через SMTP (замена Telegram-уведомлений)"""
 import logging
+import re
 import ssl
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, formatdate, make_msgid, parseaddr
 from typing import List, Optional
 
 import aiosmtplib
@@ -14,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 # Хосты, которые считаются заглушкой (staging/dev): не пытаемся к ним коннектиться.
 _STUB_HOSTS = ("example.com", "example.org", "localhost")
+
+
+def _html_to_text(html: str) -> str:
+    """Грубое HTML→text для текстовой альтернативы письма.
+    Ссылки превращаем в 'текст: url', чтобы получатель и спам-фильтры видели реальный URL.
+    """
+    html = re.sub(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', r'\2: \1', html, flags=re.S | re.I)
+    html = re.sub(r'<br\s*/?>', '\n', html, flags=re.I)
+    html = re.sub(r'</(p|h\d|div)>', '\n', html, flags=re.I)
+    text = re.sub(r'<[^>]+>', '', html)
+    text = re.sub(r'\n[ \t]*\n+', '\n\n', text)
+    return text.strip()
 
 
 def _smtp_configured() -> bool:
@@ -29,28 +43,49 @@ async def _send(
     subject: str,
     html: str,
     attachments: Optional[List[tuple]] = None,
+    text: Optional[str] = None,
 ) -> None:
     """Отправить email. Никогда не пробрасывает SMTP-ошибки наружу:
     уведомления — best-effort, бизнес-операции (заказ, оплата) не должны падать
     из-за временных проблем со связью или незаконфигуренного SMTP.
+
+    Письмо собирается как multipart/alternative (text + html): HTML-only письма
+    строгие фильтры (Mail.ru, Yandex) штрафуют как спам.
     attachments: list of (filename, bytes)
+    text: текстовая версия; если не задана — генерируется из html.
     """
     if not _smtp_configured():
         logger.info("SMTP не настроен (host=%s) — пропуск '%s' для %s",
                     settings.SMTP_HOST, subject, to)
         return
 
-    msg = MIMEMultipart("mixed")
-    msg["From"] = settings.EMAIL_FROM
-    msg["To"] = ", ".join(to)
-    msg["Subject"] = subject
-    msg.attach(MIMEText(html, "html", "utf-8"))
+    # text + html как равноправные альтернативы (text первым — так требует RFC)
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(text or _html_to_text(html), "plain", "utf-8"))
+    alt.attach(MIMEText(html, "html", "utf-8"))
 
     if attachments:
+        msg: MIMEMultipart = MIMEMultipart("mixed")
+        msg.attach(alt)
         for filename, data in attachments:
             part = MIMEApplication(data, Name=filename)
             part["Content-Disposition"] = f'attachment; filename="{filename}"'
             msg.attach(part)
+    else:
+        msg = alt
+
+    # Домен отправителя — для Message-ID он должен совпадать с From (репутация).
+    from_addr = parseaddr(settings.EMAIL_FROM)[1] or settings.SMTP_USER or ""
+    sender_domain = from_addr.split("@")[-1] if "@" in from_addr else None
+
+    msg["From"] = settings.EMAIL_FROM
+    msg["To"] = ", ".join(to)
+    msg["Subject"] = subject
+    # Date и Message-ID обязательны: письмо без них строгие фильтры (Mail.ru) режут как спам.
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain=sender_domain) if sender_domain else make_msgid()
+    if from_addr:
+        msg["Reply-To"] = formataddr(("МК Логистик", from_addr))
 
     context = ssl.create_default_context()
     try:
@@ -72,28 +107,48 @@ async def send_verification_email(to: str, token: str) -> None:
     url = f"{settings.APP_URL}/verify-email?token={token}"
     html = f"""
     <h2>Подтверждение email — МК Логистик</h2>
-    <p>Для завершения регистрации нажмите кнопку:</p>
+    <p>Здравствуйте! Для завершения регистрации в личном кабинете МК Логистик
+       перейдите по кнопке ниже:</p>
     <a href="{url}" style="background:#D4512B;color:#fff;padding:12px 24px;
        border-radius:6px;text-decoration:none;display:inline-block;font-size:16px;">
        Подтвердить email
     </a>
-    <p style="color:#888;font-size:12px;">Ссылка действительна 24 часа.</p>
+    <p style="font-size:13px;">Если кнопка не работает, скопируйте ссылку в браузер:<br>
+       <a href="{url}">{url}</a></p>
+    <p style="color:#888;font-size:12px;">Ссылка действительна 24 часа.
+       Если вы не регистрировались на сайте МК Логистик, просто проигнорируйте это письмо.</p>
     """
-    await _send([to], "Подтверждение email — МК Логистик", html)
+    text = (
+        "Подтверждение email — МК Логистик\n\n"
+        "Для завершения регистрации перейдите по ссылке:\n"
+        f"{url}\n\n"
+        "Ссылка действительна 24 часа. Если вы не регистрировались — проигнорируйте письмо."
+    )
+    await _send([to], "Подтверждение email — МК Логистик", html, text=text)
 
 
 async def send_reset_password_email(to: str, token: str) -> None:
     url = f"{settings.APP_URL}/reset-password?token={token}"
     html = f"""
     <h2>Сброс пароля — МК Логистик</h2>
-    <p>Для сброса пароля нажмите кнопку:</p>
+    <p>Вы запросили сброс пароля для аккаунта в личном кабинете МК Логистик.
+       Чтобы задать новый пароль, перейдите по кнопке ниже:</p>
     <a href="{url}" style="background:#D4512B;color:#fff;padding:12px 24px;
        border-radius:6px;text-decoration:none;display:inline-block;font-size:16px;">
        Сбросить пароль
     </a>
-    <p style="color:#888;font-size:12px;">Ссылка действительна 2 часа.</p>
+    <p style="font-size:13px;">Если кнопка не работает, скопируйте ссылку в браузер:<br>
+       <a href="{url}">{url}</a></p>
+    <p style="color:#888;font-size:12px;">Ссылка действительна 2 часа.
+       Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.</p>
     """
-    await _send([to], "Сброс пароля — МК Логистик", html)
+    text = (
+        "Сброс пароля — МК Логистик\n\n"
+        "Вы запросили сброс пароля. Чтобы задать новый, перейдите по ссылке:\n"
+        f"{url}\n\n"
+        "Ссылка действительна 2 часа. Если вы не запрашивали сброс — проигнорируйте письмо."
+    )
+    await _send([to], "Сброс пароля — МК Логистик", html, text=text)
 
 
 async def notify_managers_new_order(order_ids: List[int], client_name: str, total: float,
