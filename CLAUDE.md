@@ -81,9 +81,10 @@ alembic upgrade head
 
 # Staging деплой на VPS (mk.da-net.net)
 bash deploy-staging.sh
-# По умолчанию использует SSH-ключ через alias `mk-vps` из ~/.ssh/config
-# (нужно один раз: ssh-add --apple-use-keychain ~/.ssh/id_ed25519)
-# Fallback: SSHPASS='...' bash deploy-staging.sh — если ключ не настроен
+# Вход по SSH-ключу id_ed25519 через alias `mk-vps` (~/.ssh/config → IdentityFile).
+# Ключ уже залит в authorized_keys на сервере — пароль не нужен.
+# Проверка доступа:  ssh mk-vps "hostname"
+# Fallback (если ключ слетит): SSHPASS='...' bash deploy-staging.sh
 ```
 
 ## База данных
