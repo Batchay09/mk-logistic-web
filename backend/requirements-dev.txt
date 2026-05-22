@@ -1,0 +1,5 @@
+# Зависимости только для разработки и тестов (не попадают в production-образ).
+# Установка: pip install -r requirements.txt -r requirements-dev.txt
+-r requirements.txt
+pytest==8.4.1
+pytest-asyncio==1.3.0

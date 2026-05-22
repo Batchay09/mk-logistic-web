@@ -1,9 +1,8 @@
-import math
-from datetime import date, timedelta, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Tuple
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import PriceRule, ScheduleRule
 
@@ -22,8 +21,10 @@ class CalculatorService:
         service_pickup: bool,
         service_palletizing: bool,
     ) -> dict:
-        is_pallet_mode = boxes >= BOXES_PER_PALLET
-        pallets_count = math.ceil(boxes / BOXES_PER_PALLET) if is_pallet_mode else 0
+        # Паллетный режим показываем всегда; считаем только полные паллеты по 11 коробок.
+        # 11 → 1, 20 → 1, 22 → 2, 33 → 3. Остаток коробок едет отдельно (доставка по коробам).
+        is_pallet_mode = True
+        pallets_count = boxes // BOXES_PER_PALLET
 
         rules_q = await session.execute(
             select(PriceRule)
@@ -40,7 +41,7 @@ class CalculatorService:
 
         price_delivery = unit_price * boxes
         price_pickup = BASE_PICKUP_PRICE if service_pickup else 0
-        price_palletizing = (pallets_count * PALLETIZING_PRICE) if (is_pallet_mode and service_palletizing) else 0
+        price_palletizing = pallets_count * PALLETIZING_PRICE if service_palletizing else 0
         total = price_delivery + price_pickup + price_palletizing
 
         return {
