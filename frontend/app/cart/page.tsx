@@ -7,12 +7,12 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
-import { Trash2, Plus, ShoppingCart, CreditCard, Banknote, Loader2, ExternalLink } from "lucide-react"
+import { Trash2, Plus, ShoppingCart, CreditCard, Banknote, Loader2 } from "lucide-react"
 
 interface Order {
   id: number
@@ -92,7 +92,7 @@ export default function CartPage() {
   if (isLoading) return (
     <LayoutWithSidebar role="client">
       <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin text-[#D4512B]" />Загрузка...
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />Загрузка...
       </div>
     </LayoutWithSidebar>
   )
@@ -103,20 +103,22 @@ export default function CartPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Корзина</h1>
           <Link href="/orders/new">
-            <Button variant="outline" className="border-[#EAC9B0] text-[#D4512B] hover:bg-[#FBF0EA]">
+            <Button variant="outline" className="rounded-full">
               <Plus className="h-4 w-4 mr-1" /> Добавить заказ
             </Button>
           </Link>
         </div>
 
         {orders.length === 0 ? (
-          <Card className="border-[#EAC9B0] border-dashed">
+          <Card className="border-dashed border-border bg-muted/30">
             <CardContent className="py-14 text-center">
-              <ShoppingCart className="h-10 w-10 text-[#EAC9B0] mx-auto mb-3" />
+              <div className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-brand">
+                <ShoppingCart className="h-7 w-7" aria-hidden />
+              </div>
               <p className="font-semibold mb-1">Корзина пуста</p>
               <p className="text-sm text-muted-foreground mb-4">Добавьте заказ чтобы продолжить</p>
               <Link href="/orders/new">
-                <Button className="bg-[#D4512B] hover:bg-[#B33D1A]">Создать заказ</Button>
+                <Button className="btn-shine rounded-full px-6">Создать заказ</Button>
               </Link>
             </CardContent>
           </Card>
@@ -125,13 +127,16 @@ export default function CartPage() {
             {/* Order list */}
             <div className="space-y-3">
               {orders.map((order) => (
-                <Card key={order.id} className="border-[#EAC9B0]">
+                <Card
+                  key={order.id}
+                  className="group border-border transition-all duration-[var(--duration-base)] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+                >
                   <CardContent className="py-4 px-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-[#D4512B]">#{order.id}</span>
-                          <Badge variant="outline" className="border-[#EAC9B0] text-xs">
+                          <span className="font-semibold text-primary">#{order.id}</span>
+                          <Badge variant="outline" className="border-border text-xs">
                             {order.marketplace.toUpperCase()}
                           </Badge>
                           <span className="text-sm font-medium">{order.destination_name}</span>
@@ -147,12 +152,13 @@ export default function CartPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className="font-bold text-[#D4512B]">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
+                        <span className="font-bold text-primary tabular-nums">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           onClick={() => setDeleteId(order.id)}
+                          aria-label={`Удалить заказ #${order.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -163,23 +169,49 @@ export default function CartPage() {
               ))}
             </div>
 
-            {/* Totals & Payment */}
-            <Card className="border-[#D4512B] bg-[#FBF0EA]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Итого к оплате</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between text-xl font-bold">
-                  <span>Итого:</span>
-                  <span className="text-[#D4512B]">{total.toLocaleString("ru-RU")} ₽</span>
+            {/* Totals & Payment — брендовая аврора-панель */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] p-6 text-white shadow-brand">
+              <div className="aurora-wrap" aria-hidden>
+                <div
+                  className="aurora-blob"
+                  style={{
+                    width: 300, height: 300, top: "-40%", left: "-6%",
+                    background: "radial-gradient(circle, #FFB27A 0%, transparent 68%)",
+                  }}
+                />
+                <div
+                  className="aurora-blob"
+                  style={{
+                    width: 260, height: 260, bottom: "-50%", right: "-4%",
+                    background: "radial-gradient(circle, #FF7A45 0%, transparent 66%)",
+                    animationDelay: "-6s",
+                  }}
+                />
+              </div>
+
+              <div className="relative">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white/75">Итого к оплате</div>
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {orders.length} {orders.length === 1 ? "заказ" : orders.length < 5 ? "заказа" : "заказов"}
+                    </div>
+                  </div>
+                  <div
+                    className="text-3xl font-bold tabular-nums leading-none"
+                    style={{ textShadow: "0 2px 16px rgba(0,0,0,0.25)" }}
+                  >
+                    {total.toLocaleString("ru-RU")} ₽
+                  </div>
                 </div>
-                <Separator className="bg-[#EAC9B0]" />
+
+                <Separator className="my-5 bg-white/20" />
+
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     onClick={() => checkout("cash")}
                     disabled={paying}
-                    variant="outline"
-                    className="border-[#D4512B] text-[#D4512B] hover:bg-[#D4512B] hover:text-white h-12"
+                    className="glass-brand h-12 rounded-full text-white hover:bg-white/20"
                   >
                     {paying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Banknote className="h-4 w-4 mr-2" />}
                     Наличные
@@ -187,14 +219,14 @@ export default function CartPage() {
                   <Button
                     onClick={() => checkout("cashless")}
                     disabled={paying}
-                    className="bg-[#D4512B] hover:bg-[#B33D1A] h-12"
+                    className="btn-shine h-12 rounded-full bg-white font-semibold text-[var(--brand)] hover:bg-white"
                   >
                     {paying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                     Безналичный
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -207,9 +239,10 @@ export default function CartPage() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Это действие нельзя отменить.</p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Отмена</Button>
+            <Button variant="outline" className="rounded-full" onClick={() => setDeleteId(null)}>Отмена</Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={() => deleteId && deleteMut.mutate(deleteId)}
               disabled={deleteMut.isPending}
             >
@@ -228,10 +261,10 @@ export default function CartPage() {
               <DialogTitle>Оплата через СБП</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 text-sm">
-              <p className="font-medium text-[#D4512B] text-base">
+              <p className="font-medium text-primary text-base">
                 Сумма: {checkoutResult.total?.toLocaleString("ru-RU")} ₽
               </p>
-              <div className="bg-[#FBF0EA] rounded-lg p-3 space-y-1 border border-[#EAC9B0]">
+              <div className="bg-muted rounded-xl p-3 space-y-1 border border-border">
                 <p><span className="text-muted-foreground">Карта:</span> {checkoutResult.sbp_card}</p>
                 <p><span className="text-muted-foreground">Телефон:</span> {checkoutResult.sbp_phone}</p>
                 <p><span className="text-muted-foreground">Назначение:</span> {checkoutResult.note}</p>
@@ -241,10 +274,13 @@ export default function CartPage() {
               </p>
             </div>
             <DialogFooter>
-              <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => {
-                setCheckoutResult(null)
-                router.push("/orders/active")
-              }}>
+              <Button
+                className="btn-shine rounded-full px-6"
+                onClick={() => {
+                  setCheckoutResult(null)
+                  router.push("/orders/active")
+                }}
+              >
                 Я оплатил
               </Button>
             </DialogFooter>

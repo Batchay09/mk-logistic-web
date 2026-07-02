@@ -7,7 +7,6 @@ import { toast } from "sonner"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, ChevronRight, Check } from "lucide-react"
 import { StepMarketplace } from "@/components/features/order-wizard/step-marketplace"
 import { StepDestination } from "@/components/features/order-wizard/step-destination"
@@ -131,37 +130,60 @@ export default function NewOrderPage() {
 
   return (
     <LayoutWithSidebar role="client">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">Новый заказ</h1>
+      <div className="relative max-w-2xl mx-auto space-y-6">
+        {/* Aurora-подсветка за мастером */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 h-64 w-[34rem] max-w-full rounded-full opacity-60 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, oklch(from var(--primary) l c h / 0.12) 0%, transparent 70%)",
+          }}
+        />
+
+        <div className="relative">
+          <h1 className="text-2xl font-bold text-foreground">Новый заказ</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Шаг {step + 1} из {STEPS.length} — {STEPS[step]}
+          </p>
+        </div>
 
         {/* Progress */}
-        <div className="flex items-center gap-1">
+        <div className="relative flex items-center gap-1">
           {STEPS.map((label, i) => (
             <div key={i} className="flex items-center flex-1">
-              <div className="flex flex-col items-center gap-1 flex-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  i < step ? "bg-primary text-white" :
-                  i === step ? "bg-primary text-white ring-2 ring-primary ring-offset-2 ring-offset-background" :
-                  "bg-secondary text-primary"
+              <div className="flex flex-col items-center gap-1.5 flex-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-[var(--duration-base)] ${
+                  i < step
+                    ? "bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-[0_6px_14px_-6px_rgb(212_81_43_/_0.7)]"
+                    : i === step
+                    ? "bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white ring-2 ring-primary/40 ring-offset-2 ring-offset-background shadow-[0_8px_18px_-6px_rgb(212_81_43_/_0.8)] scale-110"
+                    : "bg-muted text-muted-foreground ring-1 ring-border"
                 }`}>
-                  {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  {i < step ? <Check className="h-4 w-4" /> : i + 1}
                 </div>
-                <span className={`text-xs hidden sm:block ${i === step ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                <span className={`text-[11px] hidden sm:block transition-colors ${
+                  i === step ? "text-primary font-semibold" : i < step ? "text-foreground/70" : "text-muted-foreground"
+                }`}>
                   {label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 flex-1 mx-1 rounded transition-colors ${i < step ? "bg-primary" : "bg-secondary"}`} />
+                <div className="h-0.5 flex-1 mx-1 rounded-full bg-muted overflow-hidden">
+                  <div className={`h-full rounded-full bg-gradient-to-r from-primary to-[var(--brand-dark)] transition-all duration-500 ${i < step ? "w-full" : "w-0"}`} />
+                </div>
               )}
             </div>
           ))}
         </div>
 
         {/* Step content */}
-        <Card className="border-border">
+        <Card className="relative border-primary/15 shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-              <Badge className="bg-primary text-white">{step + 1}/{STEPS.length}</Badge>
+            <CardTitle className="text-lg flex items-center gap-2.5 text-foreground">
+              <span className="grid place-items-center min-w-8 h-8 px-2 rounded-lg bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white text-xs font-bold shadow-brand">
+                {step + 1}/{STEPS.length}
+              </span>
               {STEPS[step]}
             </CardTitle>
           </CardHeader>
@@ -171,11 +193,12 @@ export default function NewOrderPage() {
         </Card>
 
         {/* Navigation */}
-        <div className="flex justify-between">
+        <div className="relative flex justify-between">
           <Button
             variant="outline"
             onClick={() => setStep((s) => s - 1)}
             disabled={step === 0}
+            className="rounded-full"
           >
             <ChevronLeft className="h-4 w-4 mr-1" /> Назад
           </Button>
@@ -183,6 +206,7 @@ export default function NewOrderPage() {
             <Button
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext()}
+              className="btn-shine rounded-full px-6"
             >
               Далее <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -190,6 +214,7 @@ export default function NewOrderPage() {
             <Button
               onClick={handleSubmit}
               disabled={submitting}
+              className="btn-shine rounded-full px-6"
             >
               {submitting ? "Добавляем..." : "Добавить в корзину"}
             </Button>
