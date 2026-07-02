@@ -54,7 +54,9 @@ rsync -az --delete \
     --exclude='.env.staging' \
     --exclude='.env.production' \
     --exclude='nginx/certbot/' \
-    --exclude='dev.db' \
+    --exclude='*.db' \
+    --exclude='*.sqlite' \
+    --exclude='*.sqlite3' \
     --exclude='*.png' \
     --exclude='*.jpeg' \
     --exclude='.playwright-mcp/' \
