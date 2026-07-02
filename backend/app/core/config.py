@@ -70,3 +70,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Fail-fast: в production нельзя стартовать со слабым/дефолтным ключом.
+# Иначе любой сможет подписать себе JWT (в т.ч. с sub=<id админа>) и захватить аккаунт.
+if settings.is_production and (
+    len(settings.SECRET_KEY) < 32 or "change-me" in settings.SECRET_KEY
+):
+    raise RuntimeError(
+        "SECRET_KEY не задан или слишком слабый для production. "
+        "Задайте переменную окружения SECRET_KEY длиной не менее 32 случайных символов."
+    )

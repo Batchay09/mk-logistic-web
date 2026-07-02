@@ -1,4 +1,5 @@
 """Email-уведомления через SMTP (замена Telegram-уведомлений)"""
+import html
 import logging
 import re
 import ssl
@@ -156,15 +157,19 @@ async def notify_managers_new_order(order_ids: List[int], client_name: str, tota
     if not settings.manager_email_list:
         return
     ids_str = ", ".join(f"#{i}" for i in order_ids)
-    html = f"""
+    # Экранируем пользовательский ввод (client_name/pickup_info), чтобы клиент
+    # не смог внедрить произвольный HTML/ссылки в письмо менеджеру.
+    client_name_safe = html.escape(client_name)
+    pickup_safe = html.escape(pickup_info)
+    body_html = f"""
     <h2>Новый заказ — МК Логистик</h2>
-    <p><b>Клиент:</b> {client_name}</p>
+    <p><b>Клиент:</b> {client_name_safe}</p>
     <p><b>Заказы:</b> {ids_str}</p>
     <p><b>Сумма:</b> {total:.0f} ₽</p>
-    {"<p><b>Забор:</b> " + pickup_info + "</p>" if pickup_info else ""}
+    {"<p><b>Забор:</b> " + pickup_safe + "</p>" if pickup_info else ""}
     <p>Откройте раздел <b>Менеджер → Оплаты</b> для проверки.</p>
     """
-    await _send(settings.manager_email_list, f"Новый заказ {ids_str} — МК Логистик", html)
+    await _send(settings.manager_email_list, f"Новый заказ {ids_str} — МК Логистик", body_html)
 
 
 async def notify_client_payment_confirmed(
@@ -194,11 +199,15 @@ async def notify_managers_support(client_name: str, client_phone: str, message: 
                                    active_orders: str = "") -> None:
     if not settings.manager_email_list:
         return
-    html = f"""
+    # Экранируем весь пользовательский ввод перед вставкой в HTML письма.
+    client_name_safe = html.escape(client_name)
+    client_phone_safe = html.escape(client_phone)
+    message_safe = html.escape(message).replace("\n", "<br>")
+    body_html = f"""
     <h2>Обращение от клиента — МК Логистик</h2>
-    <p><b>Клиент:</b> {client_name}</p>
-    <p><b>Телефон:</b> {client_phone}</p>
-    <p><b>Сообщение:</b><br>{message}</p>
-    {"<p><b>Активные заказы:</b><br>" + active_orders + "</p>" if active_orders else ""}
+    <p><b>Клиент:</b> {client_name_safe}</p>
+    <p><b>Телефон:</b> {client_phone_safe}</p>
+    <p><b>Сообщение:</b><br>{message_safe}</p>
+    {"<p><b>Активные заказы:</b><br>" + html.escape(active_orders) + "</p>" if active_orders else ""}
     """
-    await _send(settings.manager_email_list, f"Обращение от {client_name} — МК Логистик", html)
+    await _send(settings.manager_email_list, f"Обращение от {html.escape(client_name)} — МК Логистик", body_html)

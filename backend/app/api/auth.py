@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
+from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
     create_email_token,
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, description="Пароль не менее 8 символов")
     full_name: str
     phone: Optional[str] = None
     company_name: Optional[str] = None
@@ -92,7 +93,8 @@ def _user_out(user: User) -> UserOut:
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, response: Response, session: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest, response: Response, session: AsyncSession = Depends(get_db)):
     existing = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
@@ -122,7 +124,8 @@ async def register(body: RegisterRequest, response: Response, session: AsyncSess
 
 
 @router.post("/login", response_model=UserOut)
-async def login(body: LoginRequest, response: Response, session: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, body: LoginRequest, response: Response, session: AsyncSession = Depends(get_db)):
     user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
@@ -154,7 +157,8 @@ async def verify_email(body: VerifyEmailRequest, session: AsyncSession = Depends
 
 
 @router.post("/reset-password")
-async def reset_password(body: ResetPasswordRequest, session: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest, session: AsyncSession = Depends(get_db)):
     user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if user:
         token = create_email_token({"sub": str(user.id), "purpose": "reset"}, expires_hours=2)

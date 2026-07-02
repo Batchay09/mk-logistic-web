@@ -32,6 +32,9 @@ sshpass -e rsync -avz --progress \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.env' \
+  --exclude='*.db' \
+  --exclude='*.sqlite' \
+  --exclude='*.sqlite3' \
   --exclude='nginx/certbot/live' \
   --exclude='nginx/certbot/archive' \
   -e "ssh $SSH_OPTS" \

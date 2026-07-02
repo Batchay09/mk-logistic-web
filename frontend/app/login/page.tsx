@@ -22,10 +22,20 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
+/**
+ * Разрешаем редирект только на внутренний относительный путь.
+ * Отсекаем абсолютные URL и protocol-relative (//evil.com) — защита от open redirect.
+ */
+function safeNext(next: string | null): string | null {
+  if (!next) return null
+  if (!next.startsWith("/") || next.startsWith("//")) return null
+  return next
+}
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get("next") || null
+  const next = safeNext(searchParams.get("next"))
   const [loading, setLoading] = useState(false)
 
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })

@@ -60,5 +60,8 @@ backend/app/fonts/
 .claude/settings.local.json
 .claude/**/__pycache__/
 
-# Local SQLite DB
+# Local SQLite DB (любые базы — не коммитим, могут содержать пароли/данные юзеров)
+*.db
+*.sqlite
+*.sqlite3
 backend/dev.db

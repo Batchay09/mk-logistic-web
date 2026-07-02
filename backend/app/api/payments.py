@@ -1,8 +1,9 @@
 """ЮKassa интеграция — создание платежа и обработка webhook"""
-import hashlib
-import hmac
+import ipaddress
 import json
+import logging
 import uuid
+from decimal import Decimal, InvalidOperation
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,12 +19,45 @@ from app.db.session import get_db
 from app.services.email import notify_client_payment_confirmed
 from app.services.sticker import StickerService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/payments", tags=["payments"])
+
+# Официальные подсети, с которых ЮKassa отправляет webhook-уведомления.
+# https://yookassa.ru/developers/using-api/webhooks#ip
+_YOOKASSA_NETWORKS = [
+    ipaddress.ip_network(cidr)
+    for cidr in (
+        "185.71.76.0/27",
+        "185.71.77.0/27",
+        "77.75.153.0/25",
+        "77.75.156.11/32",
+        "77.75.156.35/32",
+        "77.75.154.128/25",
+        "2a02:5180::/32",
+    )
+]
 
 
 class YooKassaCreateRequest(BaseModel):
     order_ids: List[int]
     return_url: str
+
+
+def _client_ip(request: Request) -> str:
+    """Реальный IP отправителя с учётом reverse-proxy (nginx X-Forwarded-For)."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
+def _is_yookassa_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(addr in net for net in _YOOKASSA_NETWORKS)
 
 
 @router.post("/yookassa/create")
@@ -37,7 +71,7 @@ async def create_yookassa_payment(
 
     # Load orders
     orders = []
-    total = 0.0
+    total = Decimal("0")
     for oid in body.order_ids:
         order = (await session.execute(
             select(Order).where(Order.id == oid, Order.user_id == current_user.id)
@@ -45,7 +79,7 @@ async def create_yookassa_payment(
         if not order or order.status not in (OrderStatus.AWAITING_PAYMENT, OrderStatus.NEW):
             raise HTTPException(status_code=400, detail=f"Заказ #{oid} недоступен для оплаты")
         orders.append(order)
-        total += float(order.total_amount)
+        total += order.total_amount
 
     # Create payment via YooKassa SDK
     try:
@@ -75,53 +109,89 @@ async def create_yookassa_payment(
         return {
             "payment_id": yookassa_id,
             "confirmation_url": payment.confirmation.confirmation_url,
-            "total": total,
+            "total": float(total),
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка создания платежа: {e}")
+        logger.error("Ошибка создания платежа ЮKassa: %s", e)
+        raise HTTPException(status_code=502, detail="Не удалось создать платёж")
 
 
 @router.post("/yookassa/webhook")
 async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get_db)):
-    """Handles YooKassa payment.succeeded events."""
-    body = await request.body()
+    """Обрабатывает уведомления ЮKassa о платежах.
 
-    # Verify webhook signature if secret is set
-    if settings.YOOKASSA_WEBHOOK_SECRET:
-        signature = request.headers.get("Yookassa-Signature", "")
-        expected = hmac.new(
-            settings.YOOKASSA_WEBHOOK_SECRET.encode(),
-            body,
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(signature, expected):
-            raise HTTPException(status_code=401, detail="Invalid signature")
+    Безопасность: тело запроса НЕ является доверенным источником. Из него берём
+    только идентификатор платежа, после чего запрашиваем настоящий объект платежа
+    через YooKassa API (по нашему secret_key) и сверяем статус и сумму. Подделать
+    'payment.succeeded' невозможно — авторитетные данные приходят напрямую от ЮKassa,
+    а не из тела webhook.
+    """
+    if not settings.YOOKASSA_SHOP_ID or not settings.YOOKASSA_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="ЮKassa не настроена")
+
+    # Мягкий рубеж: логируем запросы с неожиданных IP.
+    # Основную защиту даёт сверка через API ниже, поэтому жёстко не блокируем
+    # (IP можно спутать при смене инфраструктуры ЮKassa).
+    ip = _client_ip(request)
+    if not _is_yookassa_ip(ip):
+        logger.warning("YooKassa webhook с неожиданного IP: %s", ip)
 
     try:
-        event = json.loads(body)
+        event = json.loads(await request.body())
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
     if event.get("event") != "payment.succeeded":
-        return {"ok": True}  # ignore other events
+        return {"ok": True}  # прочие события игнорируем
 
-    payment_obj = event.get("object", {})
-    metadata = payment_obj.get("metadata", {})
-    order_ids_str = metadata.get("order_ids", "")
-
-    if not order_ids_str:
+    payment_id = (event.get("object") or {}).get("id")
+    if not payment_id:
         return {"ok": True}
 
-    order_ids = [int(x) for x in order_ids_str.split(",") if x.strip().isdigit()]
+    # Авторитетная проверка: запрашиваем настоящий платёж у ЮKassa по его id.
+    try:
+        from yookassa import Configuration, Payment as YooPayment  # type: ignore
+        Configuration.account_id = settings.YOOKASSA_SHOP_ID
+        Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
+        payment = YooPayment.find_one(str(payment_id))
+    except Exception as e:
+        logger.error("Не удалось проверить платёж %s в ЮKassa: %s", payment_id, e)
+        raise HTTPException(status_code=502, detail="Не удалось проверить платёж")
 
-    for oid in order_ids:
-        order = (await session.execute(
-            select(Order)
-            .options(selectinload(Order.user), selectinload(Order.destination))
-            .where(Order.id == oid)
-        )).scalar_one_or_none()
+    if not payment or payment.status != "succeeded" or not getattr(payment, "paid", False):
+        logger.warning("Платёж %s не подтверждён ЮKassa (status=%s)",
+                       payment_id, getattr(payment, "status", None))
+        return {"ok": True}
 
-        if not order or order.status == OrderStatus.PAID:
+    # Заказы ищем в НАШЕЙ БД по payment_id, а не по metadata из тела webhook.
+    orders = list((await session.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.destination))
+        .where(Order.yookassa_payment_id == str(payment_id))
+    )).scalars().all())
+
+    if not orders:
+        logger.warning("Webhook для неизвестного payment_id: %s", payment_id)
+        return {"ok": True}
+
+    # Сверяем сумму: реально оплаченное не меньше суммы заказов.
+    expected_total = sum((o.total_amount for o in orders), Decimal("0"))
+    try:
+        paid_amount = Decimal(str(payment.amount.value))
+    except (InvalidOperation, AttributeError, TypeError):
+        paid_amount = Decimal("0")
+
+    if paid_amount < expected_total:
+        logger.error(
+            "Сумма платежа %s (%s ₽) меньше суммы заказов (%s ₽) — PAID не проставляем",
+            payment_id, paid_amount, expected_total,
+        )
+        raise HTTPException(status_code=400, detail="Сумма платежа не совпадает с заказом")
+
+    for order in orders:
+        if order.status == OrderStatus.PAID:  # идемпотентность
             continue
 
         order.status = OrderStatus.PAID
