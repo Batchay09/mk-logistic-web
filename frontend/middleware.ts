@@ -28,6 +28,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)",
+    // Исключаем внутренние маршруты Next и статические ассеты (по расширению),
+    // иначе картинки из /public (логотип .jpg, .svg) ловят редирект на /login,
+    // и Next/Image не может загрузить исходник → «битое» изображение.
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico)$).*)",
   ],
 }
