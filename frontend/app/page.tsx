@@ -11,19 +11,12 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Container } from "@/components/ui/container"
 import { Section, SectionHeader } from "@/components/ui/section"
-import {
-  H1,
-  H2,
-  H3,
-  Eyebrow,
-  Lead,
-  Muted,
-} from "@/components/ui/typography"
+import { H2, H3, Eyebrow, Lead, Muted } from "@/components/ui/typography"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Reveal } from "@/components/ui/reveal"
+import { AuroraHero } from "@/components/features/AuroraHero"
 import { HowItWorks } from "@/components/features/HowItWorks"
 import { Trust } from "@/components/features/Trust"
 import { Faq } from "@/components/features/Faq"
@@ -66,37 +59,37 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* ====================== HEADER ====================== */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 supports-[backdrop-filter]:bg-background/70 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 supports-[backdrop-filter]:bg-background/60 backdrop-blur-xl">
         <Container size="wide">
           <div className="flex items-center justify-between gap-3 h-16">
             <Link
               href="/"
-              className="flex items-center gap-2.5 -ml-1 px-1 rounded-md tap-target hover:bg-muted/60 transition-colors"
+              className="flex items-center gap-2.5 -ml-1 px-1 rounded-full tap-target hover:bg-muted/60 transition-colors"
             >
               <Image
                 src="/brand/logo-mk-logistik.jpg"
                 alt="МК Логистик"
                 width={36}
                 height={36}
-                className="rounded-md ring-1 ring-border shadow-xs"
+                className="rounded-xl ring-1 ring-border shadow-xs"
                 priority
               />
               <span className="text-sm sm:text-base font-bold tracking-tight text-foreground">
                 МК ЛОГИСТИК
               </span>
             </Link>
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <ThemeToggle />
               <Link href="/login">
                 <Button
                   variant="ghost"
-                  className="hidden sm:inline-flex h-10 px-4 text-sm tap-target"
+                  className="hidden sm:inline-flex h-10 rounded-full px-4 text-sm tap-target"
                 >
                   Войти
                 </Button>
               </Link>
               <Link href="/register">
-                <Button className="h-10 px-4 sm:px-5 text-sm font-medium shadow-sm tap-target">
+                <Button className="btn-shine h-10 rounded-full px-4 sm:px-5 text-sm font-medium shadow-sm tap-target">
                   <span className="hidden sm:inline">Регистрация</span>
                   <span className="sm:hidden">Войти</span>
                 </Button>
@@ -106,97 +99,8 @@ export default function LandingPage() {
         </Container>
       </header>
 
-      {/* ====================== HERO ======================
-          Brand surface — invariant к теме. Используем явный --brand
-          и text-white вместо токенов, чтобы выглядеть одинаково в light/dark.
-      */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] text-white">
-        {/* Декоративный background-узор */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.08] mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 25% 30%, rgba(255,255,255,0.6) 0%, transparent 40%), radial-gradient(circle at 75% 70%, rgba(255,255,255,0.4) 0%, transparent 40%)",
-          }}
-        />
-        <Container size="wide" className="relative">
-          <div className="grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center py-16 sm:py-20 lg:py-28">
-            {/* Левая колонка — текст */}
-            <div className="text-center lg:text-left flex flex-col items-center lg:items-start gap-6">
-              <Reveal initialOnMount duration={0.4}>
-                <Badge
-                  variant="outline"
-                  className="bg-white/15 border-white/30 text-white backdrop-blur-sm px-3 py-1 text-xs sm:text-sm font-medium"
-                >
-                  Доставка на склады WB и Ozon
-                </Badge>
-              </Reveal>
-
-              <Reveal initialOnMount delay={0.08}>
-                <H1 className="!text-white max-w-2xl">
-                  Логистика для маркетплейсов{" "}
-                  <span className="text-[var(--brand-light)] block sm:inline">
-                    просто и удобно
-                  </span>
-                </H1>
-              </Reveal>
-
-              <Reveal initialOnMount delay={0.16}>
-                <Lead className="!text-white/85 max-w-xl">
-                  Оформляйте заказы на доставку грузов на склады Wildberries
-                  и Ozon онлайн. Отслеживайте статусы, получайте стикеры
-                  и управляйте компанией в одном месте.
-                </Lead>
-              </Reveal>
-
-              <Reveal initialOnMount delay={0.24} className="w-full sm:w-auto">
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
-                  <Link href="/register" className="w-full sm:w-auto">
-                    <Button
-                      size="lg"
-                      className="w-full sm:w-auto h-12 px-7 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
-                    >
-                      Регистрация
-                      <ArrowRight className="size-4" aria-hidden />
-                    </Button>
-                  </Link>
-                  <Link href="/login" className="w-full sm:w-auto">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full sm:w-auto h-12 px-7 border-white/40 bg-white/5 text-white hover:bg-white/15 hover:text-white text-base tap-target"
-                    >
-                      Войти
-                    </Button>
-                  </Link>
-                </div>
-              </Reveal>
-            </div>
-
-            {/* Правая колонка — иллюстрация */}
-            <Reveal
-              initialOnMount
-              direction="left"
-              distance={32}
-              delay={0.18}
-              duration={0.6}
-              className="hidden lg:flex justify-center"
-            >
-              <div className="relative rounded-3xl bg-[var(--brand-muted)] p-8 shadow-2xl ring-1 ring-white/20">
-                <Image
-                  src="/brand/illustration-warehouse.svg"
-                  alt=""
-                  width={520}
-                  height={290}
-                  className="rounded-2xl"
-                  priority
-                />
-              </div>
-            </Reveal>
-          </div>
-        </Container>
-      </section>
+      {/* ====================== HERO (Aurora Glass) ====================== */}
+      <AuroraHero />
 
       {/* ====================== TRUST ====================== */}
       <Trust />
@@ -205,8 +109,17 @@ export default function LandingPage() {
       <HowItWorks />
 
       {/* ====================== FEATURES ====================== */}
-      <Section tone="muted" spacing="lg">
-        <Container>
+      <Section tone="muted" spacing="lg" className="relative overflow-hidden">
+        {/* Мягкое брендовое свечение позади карточек */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[46rem] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, oklch(from var(--primary) l c h / 0.16) 0%, transparent 70%)",
+          }}
+        />
+        <Container className="relative">
           <Reveal>
             <SectionHeader>
               <Eyebrow>Возможности</Eyebrow>
@@ -221,9 +134,18 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={(i % 3) * 0.08}>
-                <Card className="group border-border bg-card rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-[var(--duration-base)]">
-                  <CardContent className="p-6 flex flex-col gap-3">
-                    <div className="bg-primary/10 text-primary rounded-xl p-2.5 w-11 h-11 flex items-center justify-center transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
+                <Card className="group relative h-full overflow-hidden rounded-2xl border-border/60 bg-card/80 backdrop-blur-sm shadow-sm transition-all duration-[var(--duration-slow)] hover:-translate-y-1 hover:shadow-brand hover:border-primary/30">
+                  {/* Верхний glow при наведении */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-0 transition-opacity duration-[var(--duration-slow)] group-hover:opacity-100"
+                    style={{
+                      background:
+                        "radial-gradient(60% 100% at 50% 0%, oklch(from var(--primary) l c h / 0.14) 0%, transparent 100%)",
+                    }}
+                  />
+                  <CardContent className="relative p-6 flex flex-col gap-3">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-primary-foreground shadow-brand transition-transform duration-[var(--duration-base)] group-hover:scale-105 group-hover:-rotate-3">
                       <Icon className="size-5" aria-hidden />
                     </div>
                     <H3 className="text-lg sm:text-xl font-semibold">{title}</H3>
@@ -244,14 +166,26 @@ export default function LandingPage() {
 
       {/* ====================== CTA ====================== */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] text-white py-20 sm:py-28">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6) 0%, transparent 50%)",
-          }}
-        />
+        {/* Aurora blobs */}
+        <div className="aurora-wrap" aria-hidden>
+          <div
+            className="aurora-blob"
+            style={{
+              width: 420, height: 420, top: "-20%", left: "10%",
+              background: "radial-gradient(circle, #FFB27A 0%, transparent 68%)",
+            }}
+          />
+          <div
+            className="aurora-blob"
+            style={{
+              width: 360, height: 360, bottom: "-24%", right: "12%",
+              background: "radial-gradient(circle, #FF7A45 0%, transparent 66%)",
+              animationDelay: "-7s",
+            }}
+          />
+        </div>
+        <div className="hero-noise" aria-hidden />
+
         <Container size="narrow" className="relative text-center">
           <Reveal className="flex flex-col items-center gap-4" duration={0.55}>
             <H2 className="!text-white">Начните прямо сейчас</H2>
@@ -261,7 +195,7 @@ export default function LandingPage() {
             <Link href="/register" className="mt-3 w-full sm:w-auto">
               <Button
                 size="lg"
-                className="w-full sm:w-auto h-12 px-10 bg-white text-[var(--brand)] hover:bg-[var(--brand-light)] font-semibold text-base shadow-glow tap-target"
+                className="btn-shine h-12 w-full rounded-full bg-white px-10 text-base font-semibold text-[var(--brand)] shadow-glow transition-transform hover:-translate-y-0.5 hover:bg-white sm:w-auto"
               >
                 Зарегистрироваться бесплатно
                 <ArrowRight className="size-4" aria-hidden />
