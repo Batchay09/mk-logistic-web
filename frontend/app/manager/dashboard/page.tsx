@@ -14,45 +14,72 @@ export default function ManagerDashboard() {
     queryFn: () => api.get("/manager/payments/awaiting"),
   })
 
+  const hasAwaiting = awaiting.length > 0
+
   return (
     <LayoutWithSidebar role="manager">
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Панель менеджера</h1>
+        {/* Header + одно мягкое аврора-свечение */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+            style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+          />
+          <h1 className="relative text-2xl font-bold">Панель менеджера</h1>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/manager/payments">
-            <Card className={`border-2 hover:shadow-md transition-all cursor-pointer ${awaiting.length > 0 ? "border-orange-400 bg-orange-50" : "border-[#EAC9B0]"}`}>
+          <Link href="/manager/payments" className="group">
+            <Card
+              className={
+                "rounded-2xl transition-all duration-[var(--duration-base)] cursor-pointer hover:shadow-md hover:-translate-y-0.5 " +
+                (hasAwaiting
+                  ? "border-warning/40 bg-warning/5 hover:border-warning/60"
+                  : "border-border hover:border-primary/40")
+              }
+            >
               <CardContent className="pt-5 flex items-center gap-4">
-                <div className={`rounded-lg p-3 ${awaiting.length > 0 ? "bg-orange-100" : "bg-[#EAC9B0]"}`}>
-                  <CreditCard className={`h-5 w-5 ${awaiting.length > 0 ? "text-orange-700" : "text-[#D4512B]"}`} />
+                <div
+                  className={
+                    "rounded-xl p-3 transition-colors duration-[var(--duration-base)] " +
+                    (hasAwaiting
+                      ? "bg-warning/15 text-warning group-hover:bg-warning/25"
+                      : "bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground")
+                  }
+                >
+                  <CreditCard className="h-5 w-5" aria-hidden />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{awaiting.length}</p>
-                  <p className="text-sm text-muted-foreground">Ожидают оплаты</p>
+                  <p className="text-2xl font-bold text-foreground leading-none">{awaiting.length}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Ожидают оплаты</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
-          <Link href="/manager/search">
-            <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-all cursor-pointer">
+
+          <Link href="/manager/search" className="group">
+            <Card className="rounded-2xl border-border transition-all duration-[var(--duration-base)] cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40">
               <CardContent className="pt-5 flex items-center gap-4">
-                <div className="bg-[#EAC9B0] rounded-lg p-3">
-                  <Search className="h-5 w-5 text-[#D4512B]" />
+                <div className="rounded-xl p-3 bg-primary/15 text-primary transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Search className="h-5 w-5" aria-hidden />
                 </div>
                 <div>
-                  <p className="font-semibold">Поиск</p>
+                  <p className="font-semibold text-foreground">Поиск</p>
                   <p className="text-sm text-muted-foreground">По ИП или дате</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
-          <Link href="/manager/reports">
-            <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-all cursor-pointer">
+
+          <Link href="/manager/reports" className="group">
+            <Card className="rounded-2xl border-border transition-all duration-[var(--duration-base)] cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40">
               <CardContent className="pt-5 flex items-center gap-4">
-                <div className="bg-[#EAC9B0] rounded-lg p-3">
-                  <BarChart3 className="h-5 w-5 text-[#D4512B]" />
+                <div className="rounded-xl p-3 bg-primary/15 text-primary transition-colors duration-[var(--duration-base)] group-hover:bg-primary group-hover:text-primary-foreground">
+                  <BarChart3 className="h-5 w-5" aria-hidden />
                 </div>
                 <div>
-                  <p className="font-semibold">Отчёты</p>
+                  <p className="font-semibold text-foreground">Отчёты</p>
                   <p className="text-sm text-muted-foreground">Excel импорт/экспорт</p>
                 </div>
               </CardContent>
@@ -60,15 +87,15 @@ export default function ManagerDashboard() {
           </Link>
         </div>
 
-        {awaiting.length > 0 && (
-          <Card className="border-orange-300 bg-orange-50">
-            <CardContent className="pt-5 flex items-center justify-between">
+        {hasAwaiting && (
+          <Card className="rounded-2xl border-warning/30 bg-warning/5">
+            <CardContent className="pt-5 flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <p className="font-semibold text-orange-800">{awaiting.length} заказ(а) ожидают подтверждения оплаты</p>
-                <p className="text-sm text-orange-700">Клиенты ждут подтверждения и стикеров</p>
+                <p className="font-semibold text-foreground">{awaiting.length} заказ(а) ожидают подтверждения оплаты</p>
+                <p className="text-sm text-muted-foreground">Клиенты ждут подтверждения и стикеров</p>
               </div>
               <Link href="/manager/payments">
-                <Button className="bg-[#D4512B] hover:bg-[#B33D1A]">
+                <Button className="btn-shine rounded-full">
                   Проверить <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>

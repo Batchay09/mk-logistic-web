@@ -35,22 +35,71 @@ export default function ManagerPaymentsPage() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const total = orders.reduce((s, o) => s + o.total_amount, 0)
+
   return (
     <LayoutWithSidebar role="manager">
       <div className="space-y-5">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Проверка оплат</h1>
-          {orders.length > 0 && (
-            <Badge className="bg-orange-100 text-orange-800 border-0">{orders.length} ожидают</Badge>
-          )}
+        {/* Header + одно мягкое аврора-свечение */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+            style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+          />
+          <div className="relative flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Проверка оплат</h1>
+            {orders.length > 0 && (
+              <Badge className="bg-warning/15 text-warning border-0">{orders.length} ожидают</Badge>
+            )}
+          </div>
         </div>
 
-        {isLoading && <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-[#D4512B]" /></div>}
+        {/* Сумма к подтверждению — брендовая аврора-панель */}
+        {orders.length > 0 && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] p-6 text-white shadow-brand">
+            <div className="aurora-wrap" aria-hidden>
+              <div
+                className="aurora-blob"
+                style={{
+                  width: 300, height: 300, top: "-40%", left: "-6%",
+                  background: "radial-gradient(circle, #FFB27A 0%, transparent 68%)",
+                }}
+              />
+              <div
+                className="aurora-blob"
+                style={{
+                  width: 260, height: 260, bottom: "-50%", right: "-4%",
+                  background: "radial-gradient(circle, #FF7A45 0%, transparent 66%)",
+                  animationDelay: "-6s",
+                }}
+              />
+            </div>
+            <div className="relative flex items-end justify-between gap-3">
+              <div>
+                <div className="text-sm text-white/75">Сумма к подтверждению</div>
+                <div className="text-xs text-white/60 mt-0.5">
+                  {orders.length} {orders.length === 1 ? "заказ" : orders.length < 5 ? "заказа" : "заказов"}
+                </div>
+              </div>
+              <div
+                className="text-3xl font-bold tabular-nums leading-none"
+                style={{ textShadow: "0 2px 16px rgba(0,0,0,0.25)" }}
+              >
+                {total.toLocaleString("ru-RU")} ₽
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isLoading && <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
 
         {!isLoading && orders.length === 0 && (
-          <Card className="border-[#EAC9B0] border-dashed">
-            <CardContent className="py-12 text-center">
-              <CreditCard className="h-10 w-10 text-[#EAC9B0] mx-auto mb-3" />
+          <Card className="rounded-2xl border-dashed border-border bg-muted/30">
+            <CardContent className="py-14 text-center">
+              <div className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-brand">
+                <CreditCard className="h-7 w-7" aria-hidden />
+              </div>
               <p className="text-muted-foreground">Нет заказов ожидающих подтверждения</p>
             </CardContent>
           </Card>
@@ -58,13 +107,16 @@ export default function ManagerPaymentsPage() {
 
         <div className="space-y-3">
           {orders.map((order) => (
-            <Card key={order.id} className="border-[#EAC9B0]">
+            <Card
+              key={order.id}
+              className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/30 hover:shadow-md"
+            >
               <CardContent className="py-4 px-5">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-[#D4512B]">#{order.id}</span>
-                      <Badge variant="outline" className="border-[#EAC9B0] text-xs">{order.marketplace.toUpperCase()}</Badge>
+                      <span className="font-bold text-primary">#{order.id}</span>
+                      <Badge variant="outline" className="border-border text-xs">{order.marketplace.toUpperCase()}</Badge>
                       <span className="text-sm font-medium">{order.destination_name}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -76,12 +128,12 @@ export default function ManagerPaymentsPage() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className="font-bold text-lg text-[#D4512B]">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
+                    <span className="font-bold text-lg text-primary tabular-nums">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        className="rounded-full border-destructive/30 text-destructive hover:bg-destructive/10"
                         onClick={() => cancelMut.mutate(order.id)}
                         disabled={cancelMut.isPending || confirmMut.isPending}
                       >
@@ -89,7 +141,7 @@ export default function ManagerPaymentsPage() {
                       </Button>
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="btn-shine rounded-full bg-success text-white hover:bg-success/90"
                         onClick={() => confirmMut.mutate(order.id)}
                         disabled={confirmMut.isPending || cancelMut.isPending}
                       >

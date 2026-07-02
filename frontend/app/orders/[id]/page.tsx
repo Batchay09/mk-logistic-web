@@ -57,7 +57,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   if (isLoading) return (
     <LayoutWithSidebar role="client">
-      <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#D4512B]" /></div>
+      <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
     </LayoutWithSidebar>
   )
 
@@ -71,18 +71,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <LayoutWithSidebar role="client">
-      <div className="max-w-xl mx-auto space-y-5">
-        <div className="flex items-center gap-3">
+      <div className="relative max-w-xl mx-auto space-y-5">
+        {/* Aurora-подсветка за заголовком */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+        />
+
+        <div className="relative flex items-center gap-3">
           <Link href="/orders/active">
-            <Button variant="ghost" size="icon" className="text-[#D4512B]"><ArrowLeft className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" className="text-primary"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <h1 className="text-2xl font-bold">Заказ #{order.id}</h1>
           <span className={`${st.cls} ml-auto`}>{st.label}</span>
         </div>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="relative border-border">
           <CardHeader className="pb-2"><CardTitle className="text-base">Детали заказа</CardTitle></CardHeader>
-          <CardContent className="divide-y divide-[#EAC9B0]">
+          <CardContent className="divide-y divide-border">
             <Row label="Маркетплейс" value={order.marketplace.toUpperCase()} />
             <Row label="Направление" value={order.destination_name || "—"} />
             {order.company_name && <Row label="Компания" value={order.company_name} />}
@@ -95,34 +102,58 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </CardContent>
         </Card>
 
-        <Card className="border-[#EAC9B0] bg-[#FBF0EA]">
-          <CardContent className="pt-5 space-y-1.5">
+        {/* Итог по заказу — брендовая аврора-панель */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--brand)] via-[var(--brand)] to-[var(--brand-dark)] p-6 text-white shadow-brand">
+          <div className="aurora-wrap" aria-hidden>
+            <div
+              className="aurora-blob"
+              style={{
+                width: 300, height: 300, top: "-40%", left: "-6%",
+                background: "radial-gradient(circle, #FFB27A 0%, transparent 68%)",
+              }}
+            />
+            <div
+              className="aurora-blob"
+              style={{
+                width: 260, height: 260, bottom: "-50%", right: "-4%",
+                background: "radial-gradient(circle, #FF7A45 0%, transparent 66%)",
+                animationDelay: "-6s",
+              }}
+            />
+          </div>
+
+          <div className="relative space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Доставка</span>
-              <span>{order.price_delivery.toLocaleString("ru-RU")} ₽</span>
+              <span className="text-white/75">Доставка</span>
+              <span className="tabular-nums">{order.price_delivery.toLocaleString("ru-RU")} ₽</span>
             </div>
             {order.price_pickup > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Забор</span>
-                <span>{order.price_pickup.toLocaleString("ru-RU")} ₽</span>
+                <span className="text-white/75">Забор</span>
+                <span className="tabular-nums">{order.price_pickup.toLocaleString("ru-RU")} ₽</span>
               </div>
             )}
             {order.price_palletizing > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Паллетизация</span>
-                <span>{order.price_palletizing.toLocaleString("ru-RU")} ₽</span>
+                <span className="text-white/75">Паллетизация</span>
+                <span className="tabular-nums">{order.price_palletizing.toLocaleString("ru-RU")} ₽</span>
               </div>
             )}
-            <Separator className="bg-[#EAC9B0]" />
-            <div className="flex justify-between font-bold text-lg">
-              <span>ИТОГО</span>
-              <span className="text-[#D4512B]">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
+            <Separator className="my-4 bg-white/20" />
+            <div className="flex items-end justify-between font-bold">
+              <span className="text-lg">ИТОГО</span>
+              <span
+                className="text-2xl tabular-nums leading-none"
+                style={{ textShadow: "0 2px 16px rgba(0,0,0,0.25)" }}
+              >
+                {order.total_amount.toLocaleString("ru-RU")} ₽
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {STICKER_STATUSES.has(order.status) && (
-          <Button onClick={downloadStickers} className="w-full bg-[#D4512B] hover:bg-[#B33D1A]">
+          <Button onClick={downloadStickers} className="btn-shine w-full rounded-full bg-primary hover:bg-primary/90">
             <FileDown className="h-4 w-4 mr-2" /> Скачать стикеры PDF
           </Button>
         )}

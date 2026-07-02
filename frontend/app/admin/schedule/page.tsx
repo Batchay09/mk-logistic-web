@@ -60,19 +60,24 @@ export default function AdminSchedulePage() {
 
   return (
     <LayoutWithSidebar role="admin">
-      <div className="space-y-5 max-w-3xl">
-        <h1 className="text-2xl font-bold">Расписание</h1>
+      <div className="relative space-y-5 max-w-3xl">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+        />
+        <h1 className="relative text-2xl font-bold">Расписание</h1>
 
         <div className="flex gap-3 flex-wrap">
           <Select value={mpFilter} onValueChange={(v) => { if (v) { setMpFilter(v); setDestId("") } }}>
-            <SelectTrigger className="w-32 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32 border-border"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="wb">WB</SelectItem>
               <SelectItem value="ozon">Ozon</SelectItem>
             </SelectContent>
           </Select>
           <Select value={destId} onValueChange={(v) => v && setDestId(v)}>
-            <SelectTrigger className="w-52 border-[#EAC9B0]">
+            <SelectTrigger className="w-52 border-border">
               <SelectValue placeholder="Выберите направление" />
             </SelectTrigger>
             <SelectContent>
@@ -81,10 +86,10 @@ export default function AdminSchedulePage() {
           </Select>
           {destId && (
             <>
-              <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => setShowAdd(true)}>
+              <Button className="btn-shine rounded-full" onClick={() => setShowAdd(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Добавить
               </Button>
-              <Button variant="outline" className="border-[#EAC9B0] text-[#D4512B]" onClick={() => setShowCopy(true)}>
+              <Button variant="outline" className="rounded-full text-primary" onClick={() => setShowCopy(true)}>
                 <Copy className="h-4 w-4 mr-1" /> Скопировать с...
               </Button>
             </>
@@ -92,7 +97,7 @@ export default function AdminSchedulePage() {
         </div>
 
         {destId && (
-          <Card className="border-[#EAC9B0]">
+          <Card className="border-border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -105,7 +110,7 @@ export default function AdminSchedulePage() {
               <TableBody>
                 {isLoading && (
                   <TableRow><TableCell colSpan={4} className="text-center py-6">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#D4512B] mx-auto" />
+                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
                   </TableCell></TableRow>
                 )}
                 {rules.map((r) => (
@@ -116,7 +121,7 @@ export default function AdminSchedulePage() {
                       {r.week_offset === 0 ? "Текущая неделя" : `+${r.week_offset} нед.`}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600"
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => deleteMut.mutate(r.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -139,24 +144,24 @@ export default function AdminSchedulePage() {
           <div className="space-y-3">
             <div><Label>День сдачи</Label>
               <Select value={form.weekday_from} onValueChange={(v) => v && setForm((f) => ({ ...f, weekday_from: v }))}>
-                <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>{DAYS.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>День доставки</Label>
               <Select value={form.weekday_to} onValueChange={(v) => v && setForm((f) => ({ ...f, weekday_to: v }))}>
-                <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>{DAYS.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Сдвиг недели (0 = текущая, 1 = следующая)</Label>
-              <Input type="number" min={0} className="mt-1 border-[#EAC9B0]" value={form.week_offset}
+              <Input type="number" min={0} className="mt-1 border-border" value={form.week_offset}
                 onChange={(e) => setForm((f) => ({ ...f, week_offset: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={addMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setShowAdd(false)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={addMut.isPending}
               onClick={() => addMut.mutate({ destination_id: Number(destId), weekday_from: Number(form.weekday_from), weekday_to: Number(form.weekday_to), week_offset: Number(form.week_offset) })}>
               {addMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Добавить
@@ -170,7 +175,7 @@ export default function AdminSchedulePage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Скопировать расписание</DialogTitle></DialogHeader>
           <Select value={copySource} onValueChange={(v) => v && setCopySource(v)}>
-            <SelectTrigger className="border-[#EAC9B0]"><SelectValue placeholder="Выберите источник..." /></SelectTrigger>
+            <SelectTrigger className="border-border"><SelectValue placeholder="Выберите источник..." /></SelectTrigger>
             <SelectContent>
               {dests.filter((d) => String(d.id) !== destId).map((d) =>
                 <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
@@ -178,8 +183,8 @@ export default function AdminSchedulePage() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCopy(false)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={!copySource || copyMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setShowCopy(false)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={!copySource || copyMut.isPending}
               onClick={() => copyMut.mutate({ source: Number(copySource), target: Number(destId) })}>
               {copyMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Скопировать

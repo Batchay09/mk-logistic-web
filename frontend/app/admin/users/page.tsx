@@ -19,10 +19,10 @@ interface User {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-red-100 text-red-800",
-  manager: "bg-purple-100 text-purple-800",
-  driver: "bg-blue-100 text-blue-800",
-  client: "bg-green-100 text-green-800",
+  admin: "bg-destructive/10 text-destructive",
+  manager: "bg-primary/10 text-primary",
+  driver: "bg-info/10 text-info",
+  client: "bg-success/10 text-success",
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -58,8 +58,16 @@ export default function AdminUsersPage() {
   return (
     <LayoutWithSidebar role="admin">
       <div className="space-y-5">
-        <h1 className="text-2xl font-bold">Пользователи</h1>
-        <Card className="border-[#EAC9B0]">
+        {/* Header + one Aurora glow */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+            style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+          />
+          <h1 className="relative text-2xl font-bold">Пользователи</h1>
+        </div>
+        <Card className="border-border rounded-2xl shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -73,7 +81,7 @@ export default function AdminUsersPage() {
             <TableBody>
               {isLoading && (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#D4512B] mx-auto" />
+                  <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
                 </TableCell></TableRow>
               )}
               {users.map((user) => (
@@ -84,13 +92,13 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{user.company_name || "—"}</TableCell>
                   <TableCell>
-                    <Badge className={`${ROLE_COLORS[user.role] || "bg-gray-100 text-gray-700"} border-0 text-xs`}>
+                    <Badge className={`${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"} border-0 text-xs`}>
                       {ROLE_LABELS[user.role] || user.role}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(user)}>
-                      <Pencil className="h-4 w-4 text-[#D4512B]" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => openEdit(user)}>
+                      <Pencil className="h-4 w-4 text-primary" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -115,8 +123,8 @@ export default function AdminUsersPage() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={roleMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setEditUser(null)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={roleMut.isPending}
               onClick={() => editUser && roleMut.mutate({ id: editUser.id, role: newRole })}>
               {roleMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Сохранить

@@ -44,14 +44,22 @@ export default function SupportPage() {
   return (
     <LayoutWithSidebar role="client">
       <VStack gap="lg" className="w-full">
-        <div className="space-y-1">
-          <H2 className="text-2xl sm:text-3xl">Поддержка</H2>
-          <Muted>Менеджер ответит в течение часа в рабочие дни</Muted>
+        <div className="relative space-y-1">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-10 left-0 h-48 w-[28rem] max-w-full rounded-full opacity-50 blur-3xl"
+            style={{
+              background:
+                "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)",
+            }}
+          />
+          <H2 className="relative text-2xl sm:text-3xl">Поддержка</H2>
+          <Muted className="relative">Менеджер ответит в течение часа в рабочие дни</Muted>
         </div>
 
         <Card className="border-border bg-card rounded-2xl shadow-sm">
           <CardContent className="p-6 flex items-start gap-4">
-            <div className="shrink-0 size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="shrink-0 size-12 rounded-xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white flex items-center justify-center shadow-brand">
               <HeadphonesIcon className="size-5" aria-hidden />
             </div>
             <div className="space-y-1.5">

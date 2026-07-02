@@ -49,75 +49,95 @@ export default function ManagerReportsPage() {
   return (
     <LayoutWithSidebar role="manager">
       <div className="space-y-6 max-w-2xl">
-        <h1 className="text-2xl font-bold">Отчёты и импорт</h1>
+        {/* Header + одно мягкое аврора-свечение */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+            style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+          />
+          <h1 className="relative text-2xl font-bold">Отчёты и импорт</h1>
+        </div>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-[#D4512B]" /> Экспорт заказов
+            <CardTitle className="text-base flex items-center gap-2.5">
+              <span className="grid place-items-center size-9 rounded-lg bg-primary/15 text-primary">
+                <FileSpreadsheet className="h-5 w-5" aria-hidden />
+              </span>
+              Экспорт заказов
             </CardTitle>
             <CardDescription>Все заказы кроме черновиков в формате Excel</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => downloadFile(`${API}/manager/orders/export.xlsx`, "orders.xlsx")}
-              className="bg-[#D4512B] hover:bg-[#B33D1A]">
+              className="btn-shine rounded-full">
               <FileDown className="h-4 w-4 mr-2" /> Скачать Excel
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Upload className="h-5 w-5 text-[#D4512B]" /> Импорт статусов
+            <CardTitle className="text-base flex items-center gap-2.5">
+              <span className="grid place-items-center size-9 rounded-lg bg-primary/15 text-primary">
+                <Upload className="h-5 w-5" aria-hidden />
+              </span>
+              Импорт статусов
             </CardTitle>
             <CardDescription>Excel с колонками: ID, Status (опц.), ShipDate (опц.)</CardDescription>
           </CardHeader>
           <CardContent>
             <input ref={ordersRef} type="file" accept=".xlsx,.xls" className="hidden"
               onChange={() => handleUpload(ordersRef, "/manager/orders/import")} />
-            <Button variant="outline" className="border-[#EAC9B0] text-[#D4512B]"
+            <Button variant="outline" className="rounded-full text-primary"
               onClick={() => ordersRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" /> Загрузить файл
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-[#D4512B]" /> Импорт тарифов
+            <CardTitle className="text-base flex items-center gap-2.5">
+              <span className="grid place-items-center size-9 rounded-lg bg-primary/15 text-primary">
+                <FileSpreadsheet className="h-5 w-5" aria-hidden />
+              </span>
+              Импорт тарифов
             </CardTitle>
             <CardDescription>Marketplace, Destination, Price_1_10, Price_11_plus</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-3">
-            <Button variant="outline" className="border-[#EAC9B0]"
+            <Button variant="outline" className="rounded-full"
               onClick={() => downloadFile(`${API}/manager/prices/template.xlsx`, "prices_template.xlsx")}>
               <FileDown className="h-4 w-4 mr-2" /> Шаблон
             </Button>
             <input ref={pricesRef} type="file" accept=".xlsx,.xls" className="hidden"
               onChange={() => handleUpload(pricesRef, "/manager/prices/import")} />
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => pricesRef.current?.click()}>
+            <Button className="btn-shine rounded-full" onClick={() => pricesRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" /> Загрузить
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/30 hover:shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-[#D4512B]" /> Импорт расписания
+            <CardTitle className="text-base flex items-center gap-2.5">
+              <span className="grid place-items-center size-9 rounded-lg bg-primary/15 text-primary">
+                <FileSpreadsheet className="h-5 w-5" aria-hidden />
+              </span>
+              Импорт расписания
             </CardTitle>
             <CardDescription>Marketplace, Destination, WeekdayFrom, WeekdayTo, WeekOffset</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-3">
-            <Button variant="outline" className="border-[#EAC9B0]"
+            <Button variant="outline" className="rounded-full"
               onClick={() => downloadFile(`${API}/manager/schedule/template.xlsx`, "schedule_template.xlsx")}>
               <FileDown className="h-4 w-4 mr-2" /> Шаблон
             </Button>
             <input ref={scheduleRef} type="file" accept=".xlsx,.xls" className="hidden"
               onChange={() => handleUpload(scheduleRef, "/manager/schedule/import")} />
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => scheduleRef.current?.click()}>
+            <Button className="btn-shine rounded-full" onClick={() => scheduleRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" /> Загрузить
             </Button>
           </CardContent>

@@ -52,10 +52,18 @@ export default function AdminDestinationsPage() {
     <LayoutWithSidebar role="admin">
       <div className="space-y-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-2xl font-bold">Направления</h1>
+          {/* Header + one Aurora glow */}
+          <div className="relative">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+              style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+            />
+            <h1 className="relative text-2xl font-bold">Направления</h1>
+          </div>
           <div className="flex items-center gap-2">
             <Select value={filter} onValueChange={(v) => v && setFilter(v)}>
-              <SelectTrigger className="w-32 border-[#EAC9B0]">
+              <SelectTrigger className="w-32 border-border rounded-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -64,13 +72,13 @@ export default function AdminDestinationsPage() {
                 <SelectItem value="ozon">Ozon</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => setShowCreate(true)}>
+            <Button className="btn-shine rounded-full" onClick={() => setShowCreate(true)}>
               <Plus className="h-4 w-4 mr-1" /> Добавить
             </Button>
           </div>
         </div>
 
-        <Card className="border-[#EAC9B0]">
+        <Card className="border-border rounded-2xl shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -84,30 +92,30 @@ export default function AdminDestinationsPage() {
             <TableBody>
               {isLoading && (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#D4512B] mx-auto" />
+                  <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
                 </TableCell></TableRow>
               )}
               {destinations.map((dest) => (
                 <TableRow key={dest.id}>
                   <TableCell className="font-mono text-sm text-muted-foreground">{dest.id}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="border-[#EAC9B0] text-xs">{dest.marketplace.toUpperCase()}</Badge>
+                    <Badge variant="outline" className="border-border text-xs">{dest.marketplace.toUpperCase()}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">{dest.name}</TableCell>
                   <TableCell>
-                    <Badge className={dest.is_active ? "bg-green-100 text-green-800 border-0" : "bg-gray-100 text-gray-600 border-0"}>
+                    <Badge className={dest.is_active ? "bg-success/10 text-success border-0" : "bg-muted text-muted-foreground border-0"}>
                       {dest.is_active ? "Активно" : "Отключено"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditItem(dest)}>
-                        <Pencil className="h-4 w-4 text-[#D4512B]" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setEditItem(dest)}>
+                        <Pencil className="h-4 w-4 text-primary" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleActive(dest)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => toggleActive(dest)}>
                         {dest.is_active
-                          ? <PowerOff className="h-4 w-4 text-gray-500" />
-                          : <Power className="h-4 w-4 text-green-600" />}
+                          ? <PowerOff className="h-4 w-4 text-muted-foreground" />
+                          : <Power className="h-4 w-4 text-success" />}
                       </Button>
                     </div>
                   </TableCell>
@@ -135,13 +143,13 @@ export default function AdminDestinationsPage() {
             </div>
             <div>
               <Label>Название склада</Label>
-              <Input className="mt-1 border-[#EAC9B0]" placeholder="Коледино" value={form.name}
+              <Input className="mt-1 border-border" placeholder="Коледино" value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={!form.name || createMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setShowCreate(false)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={!form.name || createMut.isPending}
               onClick={() => createMut.mutate(form)}>
               {createMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Создать
@@ -157,13 +165,13 @@ export default function AdminDestinationsPage() {
           {editItem && (
             <div>
               <Label>Название</Label>
-              <Input className="mt-1 border-[#EAC9B0]" value={editItem.name}
+              <Input className="mt-1 border-border" value={editItem.name}
                 onChange={(e) => setEditItem((d) => d ? { ...d, name: e.target.value } : d)} />
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={updateMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setEditItem(null)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={updateMut.isPending}
               onClick={() => editItem && updateMut.mutate({ id: editItem.id, data: { name: editItem.name } })}>
               {updateMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Сохранить

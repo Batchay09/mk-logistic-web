@@ -28,17 +28,25 @@ export default function ActiveOrdersPage() {
 
   return (
     <LayoutWithSidebar role="client">
-      <div className="space-y-5">
-        <h1 className="text-2xl font-bold">Активные заказы</h1>
+      <div className="relative space-y-5">
+        {/* Aurora-подсветка за заголовком */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+        />
+        <h1 className="relative text-2xl font-bold">Активные заказы</h1>
         {isLoading && (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-[#D4512B]" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
         {!isLoading && orders.length === 0 && (
-          <Card className="border-[#EAC9B0] border-dashed">
-            <CardContent className="py-12 text-center">
-              <Truck className="h-10 w-10 text-[#EAC9B0] mx-auto mb-3" />
+          <Card className="border-dashed border-border bg-muted/30">
+            <CardContent className="py-14 text-center">
+              <div className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-brand">
+                <Truck className="h-7 w-7" aria-hidden />
+              </div>
               <p className="text-muted-foreground">Нет активных заказов</p>
             </CardContent>
           </Card>
@@ -48,12 +56,12 @@ export default function ActiveOrdersPage() {
             const st = statusMeta(order.status)
             return (
               <Link key={order.id} href={`/orders/${order.id}`}>
-                <Card className="border-[#EAC9B0] hover:border-[#D4512B] transition-colors cursor-pointer">
+                <Card className="border-border transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg cursor-pointer">
                   <CardContent className="py-4 px-5 flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#D4512B]">#{order.id}</span>
-                        <Badge variant="outline" className="border-[#EAC9B0] text-xs">{order.marketplace.toUpperCase()}</Badge>
+                        <span className="font-semibold text-primary">#{order.id}</span>
+                        <Badge variant="outline" className="border-border text-xs">{order.marketplace.toUpperCase()}</Badge>
                         <span className="text-sm font-medium">{order.destination_name}</span>
                       </div>
                       <p className="text-sm text-muted-foreground">

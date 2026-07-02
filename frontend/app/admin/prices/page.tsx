@@ -59,19 +59,24 @@ export default function AdminPricesPage() {
 
   return (
     <LayoutWithSidebar role="admin">
-      <div className="space-y-5 max-w-3xl">
-        <h1 className="text-2xl font-bold">Тарифы</h1>
+      <div className="relative space-y-5 max-w-3xl">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
+          style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
+        />
+        <h1 className="relative text-2xl font-bold">Тарифы</h1>
 
         <div className="flex gap-3 flex-wrap">
           <Select value={mpFilter} onValueChange={(v) => { if (v) { setMpFilter(v); setDestId("") } }}>
-            <SelectTrigger className="w-32 border-[#EAC9B0]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32 border-border"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="wb">WB</SelectItem>
               <SelectItem value="ozon">Ozon</SelectItem>
             </SelectContent>
           </Select>
           <Select value={destId} onValueChange={(v) => v && setDestId(v)}>
-            <SelectTrigger className="w-52 border-[#EAC9B0]">
+            <SelectTrigger className="w-52 border-border">
               <SelectValue placeholder="Выберите направление" />
             </SelectTrigger>
             <SelectContent>
@@ -80,10 +85,10 @@ export default function AdminPricesPage() {
           </Select>
           {destId && (
             <>
-              <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" onClick={() => setShowAdd(true)}>
+              <Button className="btn-shine rounded-full" onClick={() => setShowAdd(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Добавить
               </Button>
-              <Button variant="outline" className="border-[#EAC9B0] text-[#D4512B]" onClick={() => setShowCopy(true)}>
+              <Button variant="outline" className="rounded-full text-primary" onClick={() => setShowCopy(true)}>
                 <Copy className="h-4 w-4 mr-1" /> Скопировать с...
               </Button>
             </>
@@ -91,7 +96,7 @@ export default function AdminPricesPage() {
         </div>
 
         {destId && (
-          <Card className="border-[#EAC9B0]">
+          <Card className="border-border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -103,7 +108,7 @@ export default function AdminPricesPage() {
               <TableBody>
                 {isLoading && (
                   <TableRow><TableCell colSpan={3} className="text-center py-6">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#D4512B] mx-auto" />
+                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
                   </TableCell></TableRow>
                 )}
                 {rules.map((r) => (
@@ -111,7 +116,7 @@ export default function AdminPricesPage() {
                     <TableCell>от {r.min_qty} шт.</TableCell>
                     <TableCell className="font-semibold">{Number(r.price).toLocaleString("ru-RU")} ₽</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600"
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => deleteMut.mutate(r.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -135,17 +140,17 @@ export default function AdminPricesPage() {
           <DialogHeader><DialogTitle>Новый тариф</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>От (кол-во коробок)</Label>
-              <Input className="mt-1 border-[#EAC9B0]" type="number" min={1} value={form.min_qty}
+              <Input className="mt-1 border-border" type="number" min={1} value={form.min_qty}
                 onChange={(e) => setForm((f) => ({ ...f, min_qty: e.target.value }))} />
             </div>
             <div><Label>Цена за штуку (₽)</Label>
-              <Input className="mt-1 border-[#EAC9B0]" type="number" min={0} placeholder="350" value={form.price}
+              <Input className="mt-1 border-border" type="number" min={0} placeholder="350" value={form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={!form.price || addMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setShowAdd(false)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={!form.price || addMut.isPending}
               onClick={() => addMut.mutate({ destination_id: Number(destId), min_qty: Number(form.min_qty), price: Number(form.price) })}>
               {addMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Добавить
@@ -160,7 +165,7 @@ export default function AdminPricesPage() {
           <DialogHeader><DialogTitle>Скопировать тарифы с другого направления</DialogTitle></DialogHeader>
           <div><Label>Источник</Label>
             <Select value={copySource} onValueChange={(v) => v && setCopySource(v)}>
-              <SelectTrigger className="mt-1 border-[#EAC9B0]"><SelectValue placeholder="Выберите..." /></SelectTrigger>
+              <SelectTrigger className="mt-1 border-border"><SelectValue placeholder="Выберите..." /></SelectTrigger>
               <SelectContent>
                 {dests.filter((d) => String(d.id) !== destId).map((d) =>
                   <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
@@ -169,8 +174,8 @@ export default function AdminPricesPage() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCopy(false)}>Отмена</Button>
-            <Button className="bg-[#D4512B] hover:bg-[#B33D1A]" disabled={!copySource || copyMut.isPending}
+            <Button variant="outline" className="rounded-full" onClick={() => setShowCopy(false)}>Отмена</Button>
+            <Button className="btn-shine rounded-full" disabled={!copySource || copyMut.isPending}
               onClick={() => copyMut.mutate({ source: Number(copySource), target: Number(destId) })}>
               {copyMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Скопировать
