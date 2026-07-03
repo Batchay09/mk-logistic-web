@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -89,8 +90,9 @@ export default function ManagerSearchPage() {
 
         <div className="space-y-3">
           {orders.map((order) => (
-            <Card key={order.id} className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/40 hover:shadow-md">
-              <CardContent className="py-4 px-5 flex items-center justify-between gap-3">
+            <Link key={order.id} href={`/manager/orders/${order.id}`} className="block">
+              <Card className="border-border transition-all duration-[var(--duration-base)] hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
+                <CardContent className="py-4 px-5 flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-primary">#{order.id}</span>
@@ -105,8 +107,9 @@ export default function ManagerSearchPage() {
                   <span className="font-bold tabular-nums">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
                   <span className={statusMeta(order.status).cls}>{statusMeta(order.status).label}</span>
                 </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { toast } from "sonner"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
@@ -113,9 +114,9 @@ export default function ManagerPaymentsPage() {
             >
               <CardContent className="py-4 px-5">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="space-y-1">
+                  <Link href={`/manager/orders/${order.id}`} className="group flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-primary">#{order.id}</span>
+                      <span className="font-bold text-primary group-hover:underline">#{order.id}</span>
                       <Badge variant="outline" className="border-border text-xs">{order.marketplace.toUpperCase()}</Badge>
                       <span className="text-sm font-medium">{order.destination_name}</span>
                     </div>
@@ -126,7 +127,7 @@ export default function ManagerPaymentsPage() {
                       {new Date(order.ship_date).toLocaleDateString("ru-RU")}
                       {order.client_email && ` · ${order.client_email}`}
                     </p>
-                  </div>
+                  </Link>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <span className="font-bold text-lg text-primary tabular-nums">{order.total_amount.toLocaleString("ru-RU")} ₽</span>
                     <div className="flex gap-2">

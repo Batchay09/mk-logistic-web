@@ -237,6 +237,59 @@ async def broadcast(
     return {"sent": len(emails)}
 
 
+@router.get("/orders/{order_id:int}")
+async def get_order_detail(
+    order_id: int,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Полные детали одного заказа для менеджера (любой статус, любой клиент)."""
+    order = (await session.execute(
+        select(Order)
+        .options(
+            selectinload(Order.user),
+            selectinload(Order.destination),
+            selectinload(Order.pickup_address),
+        )
+        .where(Order.id == order_id)
+    )).scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+
+    pickup = None
+    if order.pickup_address:
+        pa = order.pickup_address
+        pickup = {"city": pa.city, "street": pa.street, "house": pa.house, "comment": pa.comment}
+
+    return {
+        "id": order.id,
+        "status": order.status.value,
+        "marketplace": order.marketplace.value,
+        "destination_name": order.destination.name if order.destination else None,
+        "company_name": order.company_name,
+        "payment_method": order.payment_method.value if order.payment_method else None,
+        "ship_date": order.ship_date.isoformat() if order.ship_date else None,
+        "arrival_date": order.arrival_date.isoformat() if order.arrival_date else None,
+        "boxes_count": order.boxes_count,
+        "pallets_count": order.pallets_count,
+        "is_pallet_mode": order.is_pallet_mode,
+        "service_pickup": order.service_pickup,
+        "service_palletizing": order.service_palletizing,
+        "price_delivery": float(order.price_delivery),
+        "price_pickup": float(order.price_pickup),
+        "price_palletizing": float(order.price_palletizing),
+        "total_amount": float(order.total_amount),
+        "yookassa_payment_id": order.yookassa_payment_id,
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+        "client": {
+            "name": order.user.full_name if order.user else None,
+            "email": order.user.email if order.user else None,
+            "phone": order.user.phone if order.user else None,
+        },
+        "pickup_address": pickup,
+    }
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 async def _get_order(order_id: int, session: AsyncSession, allowed_statuses: list) -> Order:
