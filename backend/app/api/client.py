@@ -1,18 +1,24 @@
+import asyncio
 from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, undefer
 
 from app.core.dependencies import require_client
+from app.core.rate_limit import limiter
 from app.db.models import (
     CompanyProfile, Destination, Marketplace, Order, OrderStatus,
     PaymentMethod, PickupAddress, SupportConversation, SupportMessage, User
 )
 from app.db.session import get_db
+from app.services.attachments import (
+    AttachmentError, MAX_UPLOAD_BYTES, content_disposition, process_image, safe_filename,
+)
 from app.services.calculator import CalculatorService
 from app.services.email import (
     notify_managers_new_order,
@@ -35,22 +41,22 @@ class DestinationOut(BaseModel):
 
 
 class AddressIn(BaseModel):
-    city: str
-    street: str
-    house: str
-    comment: Optional[str] = None
+    city: str = Field(max_length=120)
+    street: str = Field(max_length=200)
+    house: str = Field(max_length=40)
+    comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class OrderCreateRequest(BaseModel):
     destination_id: int
-    marketplace: str
+    marketplace: str = Field(max_length=32)
     ship_date: date
     arrival_date: date
-    boxes_count: int
+    boxes_count: int = Field(gt=0, le=100000)
     service_pickup: bool = False
     service_palletizing: bool = False
     pickup_address: Optional[AddressIn] = None
-    company_name: Optional[str] = None
+    company_name: Optional[str] = Field(default=None, max_length=255)
 
 
 class OrderOut(BaseModel):
@@ -91,17 +97,17 @@ class CompanyOut(BaseModel):
 
 
 class CompanyCreateRequest(BaseModel):
-    company_name: str
+    company_name: str = Field(min_length=1, max_length=255)
 
 
 class ProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    company_name: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    company_name: Optional[str] = Field(default=None, max_length=255)
 
 
 class SupportRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=4000)
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -136,10 +142,17 @@ async def create_order(
     if not dest:
         raise HTTPException(status_code=404, detail="Направление не найдено")
 
+    try:
+        marketplace = Marketplace(body.marketplace)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Неверный маркетплейс")
+
     # Calculate price
     pricing = await CalculatorService.calculate_price(
         session, body.destination_id, body.boxes_count, body.service_pickup, body.service_palletizing
     )
+    if pricing["total_amount"] <= 0:
+        raise HTTPException(status_code=400, detail="Некорректная сумма заказа")
 
     # Handle pickup address
     pickup_address_id = None
@@ -158,7 +171,7 @@ async def create_order(
     order = Order(
         user_id=current_user.id,
         status=OrderStatus.NEW,
-        marketplace=Marketplace(body.marketplace),
+        marketplace=marketplace,
         destination_id=body.destination_id,
         company_name=body.company_name or current_user.company_name,
         ship_date=body.ship_date,
@@ -344,7 +357,9 @@ async def update_profile(
 
 
 @router.post("/support")
+@limiter.limit("10/minute")
 async def send_support(
+    request: Request,
     body: SupportRequest,
     current_user: User = Depends(require_client),
     session: AsyncSession = Depends(get_db),
@@ -386,6 +401,10 @@ def _msg_out(m: SupportMessage) -> dict:
         "sender_role": m.sender_role,
         "body": m.body,
         "created_at": m.created_at.isoformat() if m.created_at else None,
+        "attachment": (
+            {"name": m.attachment_name, "mime": m.attachment_mime}
+            if m.attachment_mime else None
+        ),
     }
 
 
@@ -424,7 +443,9 @@ async def get_chat_unread(current_user: User = Depends(require_client), session:
 
 
 @router.post("/chat")
+@limiter.limit("30/minute")
 async def post_chat(
+    request: Request,
     body: ChatMessageIn,
     current_user: User = Depends(require_client),
     session: AsyncSession = Depends(get_db),
@@ -451,6 +472,75 @@ async def post_chat(
             pass
 
     return _msg_out(msg)
+
+
+@router.post("/chat/upload")
+@limiter.limit("15/minute")
+async def upload_chat_image(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_client),
+    session: AsyncSession = Depends(get_db),
+):
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        data, mime = await asyncio.to_thread(process_image, raw)
+    except AttachmentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    conv = await _get_or_create_conversation(current_user.id, session)
+    was_quiet = (conv.manager_unread or 0) == 0
+    msg = SupportMessage(
+        conversation_id=conv.id,
+        sender_role="client",
+        body="",
+        attachment_mime=mime,
+        attachment_name=safe_filename(file.filename),
+        attachment_data=data,
+    )
+    session.add(msg)
+    conv.manager_unread = (conv.manager_unread or 0) + 1
+    conv.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(msg)
+
+    if was_quiet:
+        try:
+            await notify_managers_support(
+                client_name=current_user.full_name or current_user.email or "Клиент",
+                client_phone=current_user.phone or "—",
+                message="[Изображение]",
+            )
+        except Exception:
+            pass
+
+    return _msg_out(msg)
+
+
+@router.get("/chat/attachment/{message_id:int}")
+async def get_chat_attachment(
+    message_id: int,
+    current_user: User = Depends(require_client),
+    session: AsyncSession = Depends(get_db),
+):
+    # Только вложение из СВОЕГО диалога (join по user_id) — защита от IDOR.
+    msg = (await session.execute(
+        select(SupportMessage)
+        .options(undefer(SupportMessage.attachment_data))
+        .join(SupportConversation, SupportMessage.conversation_id == SupportConversation.id)
+        .where(SupportMessage.id == message_id, SupportConversation.user_id == current_user.id)
+    )).scalar_one_or_none()
+    if not msg or not msg.attachment_data:
+        raise HTTPException(status_code=404, detail="Вложение не найдено")
+    return Response(
+        content=msg.attachment_data,
+        media_type=msg.attachment_mime or "application/octet-stream",
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": content_disposition(msg.attachment_name),
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

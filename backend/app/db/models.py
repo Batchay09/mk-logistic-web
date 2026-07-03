@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Optional, List
 from sqlalchemy import (
     BigInteger, String, Boolean, ForeignKey, Integer,
-    Numeric, Date, DateTime, Enum, JSON
+    Numeric, Date, DateTime, Enum, JSON, LargeBinary
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -287,6 +287,13 @@ class SupportMessage(Base):
     sender_role: Mapped[str] = mapped_column(String(16))  # "client" | "manager"
     body: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Вложение-изображение (nullable) — валидированное и пере-кодированное на бэке
+    attachment_mime: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    attachment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # deferred=True — тяжёлые байты НЕ грузятся на обычных запросах (списки/треды),
+    # только при явном undefer() в эндпоинте отдачи вложения.
+    attachment_data: Mapped[Optional[bytes]] = mapped_column(LargeBinary, deferred=True, nullable=True)
 
     conversation: Mapped["SupportConversation"] = relationship("SupportConversation", back_populates="messages")
 

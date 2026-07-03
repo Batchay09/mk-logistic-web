@@ -2,15 +2,20 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { MessageCircle, X, Send, Loader2 } from "lucide-react"
-import { api } from "@/lib/api"
+import { toast } from "sonner"
+import { MessageCircle, X, Send, Loader2, ImagePlus } from "lucide-react"
+import { api, API_URL } from "@/lib/api"
 import { cn } from "@/lib/utils"
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ACCEPT_IMAGES = "image/jpeg,image/png,image/webp"
 
 interface ChatMessage {
   id: number
   sender_role: "client" | "manager"
   body: string
   created_at: string | null
+  attachment: { name: string | null; mime: string } | null
 }
 interface ChatData {
   conversation_id: number
@@ -56,6 +61,48 @@ export function ChatWidget() {
       qc.invalidateQueries({ queryKey: ["client-chat-unread"] })
     },
   })
+
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const uploadMut = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`${API_URL}/client/chat/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        throw new Error((j && j.detail) || "Не удалось загрузить изображение")
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-chat"] })
+      qc.invalidateQueries({ queryKey: ["client-chat-unread"] })
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = "" // сброс — чтобы можно было выбрать тот же файл снова
+    if (!file) return
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Изображение больше 5 МБ")
+      return
+    }
+    uploadMut.mutate(file)
+  }
+
+  // Открытие чата извне (кнопка «Поддержка» в меню шлёт это событие)
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener("mk:open-chat", handler)
+    return () => window.removeEventListener("mk:open-chat", handler)
+  }, [])
 
   // При открытии — сбросить бейдж (сервер помечает прочитанным на GET /client/chat)
   useEffect(() => {
@@ -123,13 +170,29 @@ export function ChatWidget() {
                 <div
                   key={m.id}
                   className={cn(
-                    "max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug",
+                    "max-w-[80%] overflow-hidden rounded-2xl px-3 py-2 text-[13px] leading-snug",
                     mine
                       ? "ml-auto rounded-br-sm bg-gradient-to-br from-[var(--brand)] to-[var(--brand-dark)] text-white"
                       : "mr-auto rounded-bl-sm border border-border bg-card text-foreground",
                   )}
                 >
-                  {m.body}
+                  {m.attachment && (
+                    <a
+                      href={`${API_URL}/client/chat/attachment/${m.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`${API_URL}/client/chat/attachment/${m.id}`}
+                        alt={m.attachment.name || "Изображение"}
+                        className="mb-1 max-h-48 w-full rounded-xl object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  )}
+                  {m.body && <span>{m.body}</span>}
                   <span className={cn("mt-1 block text-[10px]", mine ? "text-white/70" : "text-muted-foreground")}>
                     {time(m.created_at)}
                   </span>
@@ -141,6 +204,22 @@ export function ChatWidget() {
 
           {/* Input */}
           <div className="flex items-end gap-2 border-t border-border bg-card p-2.5">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPT_IMAGES}
+              onChange={onPickFile}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadMut.isPending}
+              aria-label="Прикрепить изображение"
+              className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-40"
+            >
+              {uploadMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-5" />}
+            </button>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}

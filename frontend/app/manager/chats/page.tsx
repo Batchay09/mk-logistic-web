@@ -7,9 +7,12 @@ import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { api } from "@/lib/api"
+import { api, API_URL } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { Loader2, MessageCircle, Send, ArrowLeft, Mail, Phone } from "lucide-react"
+import { Loader2, MessageCircle, Send, ArrowLeft, Mail, Phone, ImagePlus } from "lucide-react"
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ACCEPT_IMAGES = "image/jpeg,image/png,image/webp"
 
 interface ChatListItem {
   id: number
@@ -26,6 +29,7 @@ interface ChatMessage {
   sender_role: "client" | "manager"
   body: string
   created_at: string
+  attachment: { name: string | null; mime: string } | null
 }
 
 interface ChatDetail {
@@ -176,6 +180,40 @@ function ChatThread({ conversationId, onBack }: { conversationId: number; onBack
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const fileRef = useRef<HTMLInputElement>(null)
+  const uploadMut = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`${API_URL}/manager/chats/${conversationId}/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        throw new Error((j && j.detail) || "Не удалось загрузить изображение")
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["manager-chat", conversationId] })
+      qc.invalidateQueries({ queryKey: ["manager-chats"] })
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Изображение больше 5 МБ")
+      return
+    }
+    uploadMut.mutate(file)
+  }
+
   function handleSend() {
     const body = text.trim()
     if (!body || sendMut.isPending) return
@@ -244,13 +282,29 @@ function ChatThread({ conversationId, onBack }: { conversationId: number; onBack
                 >
                   <div
                     className={cn(
-                      "whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm",
+                      "overflow-hidden whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm",
                       mine
                         ? "rounded-br-sm bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-brand"
                         : "rounded-bl-sm border border-border bg-card text-foreground",
                     )}
                   >
-                    {m.body}
+                    {m.attachment && (
+                      <a
+                        href={`${API_URL}/manager/chats/attachment/${m.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`${API_URL}/manager/chats/attachment/${m.id}`}
+                          alt={m.attachment.name || "Изображение"}
+                          className="mb-1 max-h-52 max-w-full rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                      </a>
+                    )}
+                    {m.body && <span>{m.body}</span>}
                   </div>
                   <span className="px-1 text-[11px] text-muted-foreground tabular-nums">
                     {fmtTime(m.created_at)}
@@ -265,6 +319,24 @@ function ChatThread({ conversationId, onBack }: { conversationId: number; onBack
 
       {/* Композитор */}
       <div className="flex items-end gap-2 border-t border-border p-3 shrink-0">
+        <input
+          ref={fileRef}
+          type="file"
+          accept={ACCEPT_IMAGES}
+          onChange={onPickFile}
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploadMut.isPending}
+          className="size-11 shrink-0 rounded-full text-muted-foreground hover:text-primary"
+          aria-label="Прикрепить изображение"
+        >
+          {uploadMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
+        </Button>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

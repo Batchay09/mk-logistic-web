@@ -10,6 +10,13 @@ import os
 import sys
 from pathlib import Path
 
+# Защита: seed создаёт админа с известным паролем — запрещаем на боевой БД.
+if os.environ.get("ENVIRONMENT") == "production":
+    raise SystemExit("Отказ: seed-скрипт нельзя запускать в production")
+_ambient_db = os.environ.get("DATABASE_URL", "")
+if _ambient_db and "sqlite" not in _ambient_db:
+    raise SystemExit("Отказ: DATABASE_URL не SQLite — seed только для локальной dev-БД.")
+
 # Ensure same env as run-local.sh so app.core.config loads cleanly
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./dev.db")
 os.environ.setdefault("SECRET_KEY", "local-dev-secret-key-32-chars-ok")

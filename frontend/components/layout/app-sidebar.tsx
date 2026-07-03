@@ -118,7 +118,14 @@ function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () 
             <Link
               key={href}
               href={href}
-              onClick={onNavigate}
+              onClick={(e) => {
+                // «Поддержка» открывает чат-виджет, а не ведёт на страницу контактов
+                if (href === "/support") {
+                  e.preventDefault()
+                  window.dispatchEvent(new Event("mk:open-chat"))
+                }
+                onNavigate?.()
+              }}
               className={cn(
                 "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-[var(--duration-base)]",
                 active

@@ -2,7 +2,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/calc", tags=["calculator"])
 
 class PriceRequest(BaseModel):
     destination_id: int
-    boxes: int
+    boxes: int = Field(gt=0, le=100000)
     service_pickup: bool = False
     service_palletizing: bool = False
 

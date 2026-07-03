@@ -1,18 +1,28 @@
+import asyncio
+import logging
 from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, undefer
 
 from app.core.dependencies import require_manager
+from app.core.rate_limit import limiter
 from app.db.models import (
     Order, OrderStatus, SupportConversation, SupportMessage, User, UserRole,
 )
 from app.db.session import get_db
+from app.services.attachments import (
+    AttachmentError, MAX_UPLOAD_BYTES, content_disposition, process_image, safe_filename,
+)
+
+logger = logging.getLogger(__name__)
+
+MAX_IMPORT_BYTES = 10 * 1024 * 1024  # 10 МБ на Excel-импорт
 from app.services.email import (
     notify_client_order_canceled,
     notify_client_payment_confirmed,
@@ -75,6 +85,7 @@ async def confirm_payment(
 ):
     order = await _get_order(order_id, session, [OrderStatus.AWAITING_PAYMENT])
     order.status = OrderStatus.PAID
+    logger.info("Менеджер id=%s подтвердил оплату заказа #%s", current_user.id, order.id)
     await session.commit()
     await session.refresh(order, ["user", "destination"])
 
@@ -102,6 +113,7 @@ async def cancel_payment(
 ):
     order = await _get_order(order_id, session, [OrderStatus.AWAITING_PAYMENT, OrderStatus.NEW])
     order.status = OrderStatus.CANCELED
+    logger.info("Менеджер id=%s отменил заказ #%s", current_user.id, order.id)
     await session.commit()
     await session.refresh(order, ["user"])
 
@@ -155,7 +167,9 @@ async def import_orders(
     current_user: User = Depends(require_manager),
     session: AsyncSession = Depends(get_db),
 ):
-    content = await file.read()
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    if len(content) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 10 МБ)")
     # Simple import: update order status by ID from Excel
     # Expected columns: ID, Status (optional), ShipDate (optional)
     import asyncio
@@ -203,7 +217,9 @@ async def import_prices(
     current_user: User = Depends(require_manager),
     session: AsyncSession = Depends(get_db),
 ):
-    content = await file.read()
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    if len(content) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 10 МБ)")
     result = await import_prices_from_excel(session, content)
     return {"message": result}
 
@@ -224,13 +240,17 @@ async def import_schedule(
     current_user: User = Depends(require_manager),
     session: AsyncSession = Depends(get_db),
 ):
-    content = await file.read()
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    if len(content) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 10 МБ)")
     result = await import_schedule_from_excel(session, content)
     return {"message": result}
 
 
 @router.post("/broadcast")
+@limiter.limit("6/hour")
 async def broadcast(
+    request: Request,
     body: BroadcastRequest,
     current_user: User = Depends(require_manager),
     session: AsyncSession = Depends(get_db),
@@ -311,13 +331,21 @@ async def list_chats(
     out = []
     for c in convs:
         last = c.messages[-1] if c.messages else None
+        if last is None:
+            preview = None
+        elif last.body:
+            preview = last.body
+        elif last.attachment_mime:
+            preview = "Изображение"
+        else:
+            preview = ""
         out.append({
             "id": c.id,
             "client_name": c.user.full_name if c.user else None,
             "client_email": c.user.email if c.user else None,
             "unread": c.manager_unread,
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-            "last_message": last.body if last else None,
+            "last_message": preview,
             "last_sender": last.sender_role if last else None,
         })
     return out
@@ -357,20 +385,14 @@ async def get_chat_thread(
             "email": conv.user.email if conv.user else None,
             "phone": conv.user.phone if conv.user else None,
         },
-        "messages": [
-            {
-                "id": m.id,
-                "sender_role": m.sender_role,
-                "body": m.body,
-                "created_at": m.created_at.isoformat() if m.created_at else None,
-            }
-            for m in conv.messages
-        ],
+        "messages": [_chat_msg_out(m) for m in conv.messages],
     }
 
 
 @router.post("/chats/{conversation_id:int}")
+@limiter.limit("40/minute")
 async def reply_chat(
+    request: Request,
     conversation_id: int,
     body: ChatReplyIn,
     current_user: User = Depends(require_manager),
@@ -388,15 +410,85 @@ async def reply_chat(
     conv.updated_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(msg)
-    return {
-        "id": msg.id,
-        "sender_role": msg.sender_role,
-        "body": msg.body,
-        "created_at": msg.created_at.isoformat() if msg.created_at else None,
-    }
+    return _chat_msg_out(msg)
+
+
+@router.post("/chats/{conversation_id:int}/upload")
+@limiter.limit("20/minute")
+async def upload_chat_reply_image(
+    request: Request,
+    conversation_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    conv = (await session.execute(
+        select(SupportConversation).where(SupportConversation.id == conversation_id)
+    )).scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Диалог не найден")
+
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        data, mime = await asyncio.to_thread(process_image, raw)
+    except AttachmentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    msg = SupportMessage(
+        conversation_id=conv.id,
+        sender_role="manager",
+        body="",
+        attachment_mime=mime,
+        attachment_name=safe_filename(file.filename),
+        attachment_data=data,
+    )
+    session.add(msg)
+    conv.client_unread = (conv.client_unread or 0) + 1
+    conv.manager_unread = 0
+    conv.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(msg)
+    return _chat_msg_out(msg)
+
+
+@router.get("/chats/attachment/{message_id:int}")
+async def get_chat_attachment(
+    message_id: int,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    msg = (await session.execute(
+        select(SupportMessage)
+        .options(undefer(SupportMessage.attachment_data))
+        .where(SupportMessage.id == message_id)
+    )).scalar_one_or_none()
+    if not msg or not msg.attachment_data:
+        raise HTTPException(status_code=404, detail="Вложение не найдено")
+    return Response(
+        content=msg.attachment_data,
+        media_type=msg.attachment_mime or "application/octet-stream",
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": content_disposition(msg.attachment_name),
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _chat_msg_out(m: SupportMessage) -> dict:
+    return {
+        "id": m.id,
+        "sender_role": m.sender_role,
+        "body": m.body,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+        "attachment": (
+            {"name": m.attachment_name, "mime": m.attachment_mime}
+            if m.attachment_mime else None
+        ),
+    }
 
 async def _get_order(order_id: int, session: AsyncSession, allowed_statuses: list) -> Order:
     order = (await session.execute(

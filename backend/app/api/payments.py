@@ -45,10 +45,18 @@ class YooKassaCreateRequest(BaseModel):
 
 
 def _client_ip(request: Request) -> str:
-    """Реальный IP отправителя с учётом reverse-proxy (nginx X-Forwarded-For)."""
+    """Реальный IP отправителя с учётом reverse-proxy.
+
+    X-Real-IP nginx ставит безусловно ($remote_addr) — подделать нельзя.
+    X-Forwarded-For клиент может подделать (nginx дописывает реальный IP в конец),
+    поэтому берём последний элемент.
+    """
+    real_ip = request.headers.get("x-real-ip", "")
+    if real_ip:
+        return real_ip.strip()
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else ""
 
 
