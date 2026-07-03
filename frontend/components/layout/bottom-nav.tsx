@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   History,
   User,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -36,6 +37,7 @@ const clientItems: NavItem[] = [
 const managerItems: NavItem[] = [
   { href: "/manager/dashboard", label: "Главная", icon: LayoutDashboard },
   { href: "/manager/payments", label: "Оплаты", icon: ShoppingCart },
+  { href: "/manager/chats", label: "Чаты", icon: MessageCircle },
   { href: "/manager/search", label: "Поиск", icon: Package },
   { href: "/manager/reports", label: "Отчёты", icon: History },
 ]

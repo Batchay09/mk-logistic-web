@@ -254,3 +254,41 @@ class AuditLog(Base):
 
     def __str__(self) -> str:
         return f"AuditLog #{self.id}: {self.action} {self.table_name}[{self.record_id}]"
+
+
+class SupportConversation(Base):
+    """Один диалог поддержки на клиента (клиент ↔ менеджеры)."""
+    __tablename__ = "support_conversations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    client_unread: Mapped[int] = mapped_column(Integer, default=0)
+    manager_unread: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship("User")
+    messages: Mapped[List["SupportMessage"]] = relationship(
+        "SupportMessage",
+        back_populates="conversation",
+        order_by="SupportMessage.created_at",
+        cascade="all, delete-orphan",
+    )
+
+    def __str__(self) -> str:
+        return f"Диалог #{self.id} (user {self.user_id})"
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("support_conversations.id"), index=True)
+    sender_role: Mapped[str] = mapped_column(String(16))  # "client" | "manager"
+    body: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    conversation: Mapped["SupportConversation"] = relationship("SupportConversation", back_populates="messages")
+
+    def __str__(self) -> str:
+        return f"Сообщение #{self.id} ({self.sender_role})"

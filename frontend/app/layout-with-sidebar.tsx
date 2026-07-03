@@ -1,5 +1,6 @@
 import { AppSidebar, MobileTopbar } from "@/components/layout/app-sidebar"
 import { BottomNav } from "@/components/layout/bottom-nav"
+import { ChatWidget } from "@/components/features/ChatWidget"
 
 type SidebarRole = "client" | "manager" | "admin"
 
@@ -38,6 +39,7 @@ export function LayoutWithSidebar({
         </main>
       </div>
       <BottomNav role={role} />
+      {role === "client" && <ChatWidget />}
     </div>
   )
 }

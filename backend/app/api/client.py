@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import require_client
 from app.db.models import (
     CompanyProfile, Destination, Marketplace, Order, OrderStatus,
-    PaymentMethod, PickupAddress, User
+    PaymentMethod, PickupAddress, SupportConversation, SupportMessage, User
 )
 from app.db.session import get_db
 from app.services.calculator import CalculatorService
@@ -372,6 +372,85 @@ async def send_support(
         active_orders=orders_str,
     )
     return {"ok": True}
+
+
+# ── Chat (поддержка: клиент ↔ менеджер) ────────────────────────────────────────
+
+class ChatMessageIn(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+
+
+def _msg_out(m: SupportMessage) -> dict:
+    return {
+        "id": m.id,
+        "sender_role": m.sender_role,
+        "body": m.body,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+    }
+
+
+async def _get_or_create_conversation(user_id: int, session: AsyncSession) -> SupportConversation:
+    conv = (await session.execute(
+        select(SupportConversation).where(SupportConversation.user_id == user_id)
+    )).scalar_one_or_none()
+    if not conv:
+        conv = SupportConversation(user_id=user_id)
+        session.add(conv)
+        await session.commit()
+        await session.refresh(conv)
+    return conv
+
+
+@router.get("/chat")
+async def get_chat(current_user: User = Depends(require_client), session: AsyncSession = Depends(get_db)):
+    conv = await _get_or_create_conversation(current_user.id, session)
+    msgs = (await session.execute(
+        select(SupportMessage)
+        .where(SupportMessage.conversation_id == conv.id)
+        .order_by(SupportMessage.created_at)
+    )).scalars().all()
+    if conv.client_unread:
+        conv.client_unread = 0
+        await session.commit()
+    return {"conversation_id": conv.id, "messages": [_msg_out(m) for m in msgs]}
+
+
+@router.get("/chat/unread")
+async def get_chat_unread(current_user: User = Depends(require_client), session: AsyncSession = Depends(get_db)):
+    conv = (await session.execute(
+        select(SupportConversation).where(SupportConversation.user_id == current_user.id)
+    )).scalar_one_or_none()
+    return {"unread": conv.client_unread if conv else 0}
+
+
+@router.post("/chat")
+async def post_chat(
+    body: ChatMessageIn,
+    current_user: User = Depends(require_client),
+    session: AsyncSession = Depends(get_db),
+):
+    conv = await _get_or_create_conversation(current_user.id, session)
+    was_quiet = (conv.manager_unread or 0) == 0
+    msg = SupportMessage(conversation_id=conv.id, sender_role="client", body=body.body)
+    session.add(msg)
+    conv.manager_unread = (conv.manager_unread or 0) + 1
+    conv.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(msg)
+
+    # Email менеджеру только на «новую» активность (не на каждое сообщение) — в
+    # интерфейсе и так есть живой бейдж непрочитанного.
+    if was_quiet:
+        try:
+            await notify_managers_support(
+                client_name=current_user.full_name or current_user.email or "Клиент",
+                client_phone=current_user.phone or "—",
+                message=body.body,
+            )
+        except Exception:
+            pass
+
+    return _msg_out(msg)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

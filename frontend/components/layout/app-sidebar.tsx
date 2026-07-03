@@ -4,13 +4,14 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
-import { API_URL } from "@/lib/api"
+import { API_URL, api } from "@/lib/api"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import {
   LayoutDashboard, Package, ShoppingCart, History, User, Building2,
   HeadphonesIcon, Truck, Users, MapPin, DollarSign, Calendar, ClipboardList,
-  LogOut, BarChart3, Search, Menu, Megaphone
+  LogOut, BarChart3, Search, Menu, Megaphone, MessageCircle
 } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -36,6 +37,7 @@ const managerNav: NavItem[] = [
   { href: "/manager/payments", label: "Проверка оплат", icon: DollarSign },
   { href: "/manager/search", label: "Поиск заказов", icon: Search },
   { href: "/manager/reports", label: "Excel / Отчёты", icon: BarChart3 },
+  { href: "/manager/chats", label: "Чаты", icon: MessageCircle },
   { href: "/manager/broadcast", label: "Рассылка", icon: Megaphone },
 ]
 
@@ -64,6 +66,15 @@ const roleLabel = (r: SidebarRole) =>
 function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () => void }) {
   const pathname = usePathname()
   const nav = role === "admin" ? adminNav : role === "manager" ? managerNav : clientNav
+
+  // Живой бейдж непрочитанных чатов для менеджера — видно на любой странице
+  const { data: chatUnread } = useQuery<{ unread: number }>({
+    queryKey: ["manager-chats-unread"],
+    queryFn: () => api.get("/manager/chats/unread"),
+    refetchInterval: 5000,
+    enabled: role === "manager",
+  })
+  const chatUnreadCount = chatUnread?.unread ?? 0
 
   return (
     <div className="relative flex flex-col h-full overflow-hidden bg-sidebar text-sidebar-foreground">
@@ -122,6 +133,16 @@ function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () 
                 )}
               />
               {label}
+              {href === "/manager/chats" && chatUnreadCount > 0 && (
+                <span
+                  className={cn(
+                    "ml-auto grid min-w-5 h-5 place-items-center rounded-full px-1.5 text-[11px] font-bold",
+                    active ? "bg-white text-primary" : "bg-primary text-white"
+                  )}
+                >
+                  {chatUnreadCount}
+                </span>
+              )}
             </Link>
           )
         })}

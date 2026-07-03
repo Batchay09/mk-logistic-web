@@ -1,15 +1,17 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import require_manager
-from app.db.models import Order, OrderStatus, User, UserRole
+from app.db.models import (
+    Order, OrderStatus, SupportConversation, SupportMessage, User, UserRole,
+)
 from app.db.session import get_db
 from app.services.email import (
     notify_client_order_canceled,
@@ -45,6 +47,10 @@ class OrderBrief(BaseModel):
 class BroadcastRequest(BaseModel):
     subject: str = Field(min_length=1, max_length=200)
     message: str = Field(min_length=1)
+
+
+class ChatReplyIn(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
 
 
 @router.get("/payments/awaiting", response_model=List[OrderBrief])
@@ -287,6 +293,106 @@ async def get_order_detail(
             "phone": order.user.phone if order.user else None,
         },
         "pickup_address": pickup,
+    }
+
+
+# ── Chat / инбокс поддержки ─────────────────────────────────────────────────────
+
+@router.get("/chats")
+async def list_chats(
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    convs = (await session.execute(
+        select(SupportConversation)
+        .options(selectinload(SupportConversation.user), selectinload(SupportConversation.messages))
+        .order_by(SupportConversation.updated_at.desc())
+    )).scalars().all()
+    out = []
+    for c in convs:
+        last = c.messages[-1] if c.messages else None
+        out.append({
+            "id": c.id,
+            "client_name": c.user.full_name if c.user else None,
+            "client_email": c.user.email if c.user else None,
+            "unread": c.manager_unread,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            "last_message": last.body if last else None,
+            "last_sender": last.sender_role if last else None,
+        })
+    return out
+
+
+@router.get("/chats/unread")
+async def chats_unread(
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    total = (await session.execute(
+        select(func.coalesce(func.sum(SupportConversation.manager_unread), 0))
+    )).scalar_one()
+    return {"unread": int(total or 0)}
+
+
+@router.get("/chats/{conversation_id:int}")
+async def get_chat_thread(
+    conversation_id: int,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    conv = (await session.execute(
+        select(SupportConversation)
+        .options(selectinload(SupportConversation.user), selectinload(SupportConversation.messages))
+        .where(SupportConversation.id == conversation_id)
+    )).scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Диалог не найден")
+    if conv.manager_unread:
+        conv.manager_unread = 0
+        await session.commit()
+    return {
+        "id": conv.id,
+        "client": {
+            "name": conv.user.full_name if conv.user else None,
+            "email": conv.user.email if conv.user else None,
+            "phone": conv.user.phone if conv.user else None,
+        },
+        "messages": [
+            {
+                "id": m.id,
+                "sender_role": m.sender_role,
+                "body": m.body,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in conv.messages
+        ],
+    }
+
+
+@router.post("/chats/{conversation_id:int}")
+async def reply_chat(
+    conversation_id: int,
+    body: ChatReplyIn,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    conv = (await session.execute(
+        select(SupportConversation).where(SupportConversation.id == conversation_id)
+    )).scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Диалог не найден")
+    msg = SupportMessage(conversation_id=conv.id, sender_role="manager", body=body.body)
+    session.add(msg)
+    conv.client_unread = (conv.client_unread or 0) + 1
+    conv.manager_unread = 0  # менеджер прочитал, отвечая
+    conv.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(msg)
+    return {
+        "id": msg.id,
+        "sender_role": msg.sender_role,
+        "body": msg.body,
+        "created_at": msg.created_at.isoformat() if msg.created_at else None,
     }
 
 
