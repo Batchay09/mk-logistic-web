@@ -195,6 +195,22 @@ async def notify_client_order_canceled(to: str, order_id: int) -> None:
     await _send([to], f"Заказ #{order_id} отменён — МК Логистик", html)
 
 
+async def send_broadcast(recipients: List[str], subject: str, message: str) -> None:
+    """Рассылка менеджера по клиентам. Каждому получателю — отдельным письмом
+    (не раскрываем список адресов друг другу). Best-effort: ошибки уже глотаются в _send.
+    Экранируем subject и message, чтобы менеджер не мог внедрить произвольный HTML.
+    """
+    subject_safe = html.escape(subject)
+    message_safe = html.escape(message).replace("\n", "<br>")
+    body_html = f"""
+    <h2>{subject_safe}</h2>
+    <p>{message_safe}</p>
+    <p style="color:#888;font-size:12px;">С уважением, команда МК Логистик.</p>
+    """
+    for to in recipients:
+        await _send([to], subject, body_html)
+
+
 async def notify_managers_support(client_name: str, client_phone: str, message: str,
                                    active_orders: str = "") -> None:
     if not settings.manager_email_list:

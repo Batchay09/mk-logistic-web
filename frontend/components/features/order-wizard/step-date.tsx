@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import type { WizardState } from "@/app/orders/new/page"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { CalendarDays, Loader2, ArrowRight } from "lucide-react"
+import { CalendarDays, Loader2 } from "lucide-react"
 
 interface DateOption {
   ship_date: string

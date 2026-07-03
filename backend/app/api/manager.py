@@ -3,15 +3,19 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import require_manager
-from app.db.models import Order, OrderStatus, User
+from app.db.models import Order, OrderStatus, User, UserRole
 from app.db.session import get_db
-from app.services.email import notify_client_order_canceled, notify_client_payment_confirmed
+from app.services.email import (
+    notify_client_order_canceled,
+    notify_client_payment_confirmed,
+    send_broadcast,
+)
 from app.services.reports import generate_orders_report
 from app.services.import_prices import import_prices_from_excel, generate_price_template
 from app.services.import_schedule import import_schedule_from_excel, generate_schedule_template
@@ -36,6 +40,11 @@ class OrderBrief(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BroadcastRequest(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    message: str = Field(min_length=1)
 
 
 @router.get("/payments/awaiting", response_model=List[OrderBrief])
@@ -212,6 +221,20 @@ async def import_schedule(
     content = await file.read()
     result = await import_schedule_from_excel(session, content)
     return {"message": result}
+
+
+@router.post("/broadcast")
+async def broadcast(
+    body: BroadcastRequest,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    result = await session.execute(
+        select(User.email).where(User.role == UserRole.CLIENT, User.email.is_not(None))
+    )
+    emails = [email for email in result.scalars().all()]
+    await send_broadcast(emails, body.subject, body.message)
+    return {"sent": len(emails)}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

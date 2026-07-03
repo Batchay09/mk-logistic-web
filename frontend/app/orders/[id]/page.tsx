@@ -35,7 +35,7 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
 
-  const { data: order, isLoading, error } = useQuery<Order>({
+  const { data: order, isLoading } = useQuery<Order>({
     queryKey: ["order", id],
     queryFn: () => api.get(`/client/orders/${id}`),
   })

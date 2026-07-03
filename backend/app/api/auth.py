@@ -51,6 +51,11 @@ class VerifyEmailRequest(BaseModel):
     token: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
 class UserOut(BaseModel):
     id: int
     email: Optional[str]
@@ -186,6 +191,22 @@ async def reset_confirm(body: ResetPasswordConfirm, session: AsyncSession = Depe
         raise HTTPException(status_code=400, detail="Пароль должен быть не менее 8 символов")
 
     user.password_hash = hash_password(body.new_password)
+    await session.commit()
+    return {"ok": True}
+
+
+@router.post("/change-password")
+@limiter.limit("5/minute")
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    if not current_user.password_hash or not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Неверный текущий пароль")
+
+    current_user.password_hash = hash_password(body.new_password)
     await session.commit()
     return {"ok": True}
 

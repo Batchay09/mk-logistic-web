@@ -63,7 +63,7 @@ export function BottomSheetContent({
   )
 }
 
-interface BottomSheetHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+type BottomSheetHeaderProps = React.HTMLAttributes<HTMLDivElement>
 
 export function BottomSheetHeader({
   className,
@@ -77,7 +77,7 @@ export function BottomSheetHeader({
   )
 }
 
-interface BottomSheetFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
+type BottomSheetFooterProps = React.HTMLAttributes<HTMLDivElement>
 
 export function BottomSheetFooter({
   className,

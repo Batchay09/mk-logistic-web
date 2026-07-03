@@ -1,10 +1,19 @@
 "use client"
 
-import { HeadphonesIcon, Mail, MessageCircle } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { toast } from "sonner"
+import { HeadphonesIcon, Mail, MessageCircle, Send, Loader2 } from "lucide-react"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Textarea } from "@/components/ui/textarea"
 import { H2, H4, Lead, Muted } from "@/components/ui/typography"
 import { VStack } from "@/components/ui/stack"
+import { api, ApiError } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface ContactProps {
@@ -40,6 +49,67 @@ function ContactCard({ icon: Icon, title, description, href, hrefLabel }: Contac
   )
 }
 
+const supportSchema = z.object({
+  message: z.string().min(10, "Опишите вопрос подробнее — минимум 10 символов"),
+})
+type SupportFormData = z.infer<typeof supportSchema>
+
+function SupportForm() {
+  const [loading, setLoading] = useState(false)
+
+  const form = useForm<SupportFormData>({
+    resolver: zodResolver(supportSchema),
+    defaultValues: { message: "" },
+  })
+
+  async function onSubmit(data: SupportFormData) {
+    setLoading(true)
+    try {
+      await api.post<{ ok: boolean }>("/client/support", data)
+      toast.success("Сообщение отправлено, менеджер ответит")
+      form.reset({ message: "" })
+    } catch (e: unknown) {
+      const msg = e instanceof ApiError ? e.message : "Не удалось отправить сообщение"
+      toast.error(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="border-border bg-card rounded-2xl shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-base sm:text-lg">Написать в поддержку</CardTitle>
+        <CardDescription>Опишите вопрос — ответим на email, указанный в профиле</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField control={form.control} name="message" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Сообщение</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Опишите вопрос по заказу, оплате или доставке..."
+                    className="min-h-32 resize-y"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <Button type="submit" disabled={loading} size="lg" className="btn-shine rounded-full px-6">
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Отправить
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SupportPage() {
   return (
     <LayoutWithSidebar role="client">
@@ -71,6 +141,8 @@ export default function SupportPage() {
             </div>
           </CardContent>
         </Card>
+
+        <SupportForm />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ContactCard

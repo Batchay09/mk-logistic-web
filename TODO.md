@@ -10,7 +10,7 @@
 - [ ] HTTPS через Let's Encrypt (certbot в docker-compose.yml)
 - [ ] Заполнить `.env` на VPS (`SECRET_KEY`, SMTP, YooKassa, ADMIN_*)
 - [ ] Подключить ЮKassa: `shop_id` + `secret_key` + настроить webhook URL `https://mk-logistic.ru/payments/yookassa/webhook`
-- [ ] Настроить SMTP Yandex (приложение-пароль для аккаунта)
+- [x] SMTP настроен на staging (SpaceWeb smtp.spaceweb.ru:465, auth проверен) — для прода задать креды в `.env`
 - [ ] Первый `./deploy.sh`, проверить что бот всё ещё работает на той же БД
 - [ ] **Бэкапы Postgres** — cron `pg_dump` ежедневно + ротация 7 дней
 - [ ] **Мониторинг** — Healthchecks.io / UptimeRobot на `/healthz`, алерт в Telegram при падении
@@ -21,17 +21,17 @@
 
 (Папки в `frontend/app/` существуют, но без `page.tsx` → 404)
 
-- [ ] `/profile` — редактирование имени, email, телефона, смена пароля
-- [ ] `/companies` — CRUD `CompanyProfile` (юр. лица для стикеров)
-- [ ] `/support` — форма обратной связи + контакты
-- [ ] `/reset-password` — восстановление по email-токену
-- [ ] `/verify-email` — обработка ссылки подтверждения email из welcome-письма
+- [x] `/profile` — редактирование имени, телефона, компании + смена пароля (форма + `POST /auth/change-password`)
+- [x] `/companies` — CRUD `CompanyProfile` (юр. лица для стикеров)
+- [x] `/support` — форма обратной связи + контакты
+- [x] `/reset-password` — восстановление по email-токену
+- [x] `/verify-email` — обработка ссылки подтверждения email из welcome-письма
 
 ## 🟡 Менеджер
 
-- [ ] Seed manager-юзера в `backend/scripts/seed_test_users.py`
+- [x] Seed manager-юзера в `backend/scripts/seed_test_users.py` (manager@test.ru)
 - [ ] Браузерный QA `/manager/payments`, `/manager/search`, `/manager/reports`
-- [ ] `/manager/broadcast` — массовая рассылка email клиентам
+- [x] `/manager/broadcast` — массовая рассылка email клиентам (форма + `POST /manager/broadcast`)
 
 ## 🟢 Улучшения
 

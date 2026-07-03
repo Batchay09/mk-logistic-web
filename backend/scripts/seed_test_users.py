@@ -57,6 +57,14 @@ SEED_USERS: list[dict] = [
         "phone": "+7 999 123-45-67",
         "company_name": "ООО Тест",
     },
+    {
+        "email": "manager@test.ru",
+        "password": SEED_PASSWORD,
+        "full_name": "Тестовый менеджер",
+        "role": UserRole.MANAGER,
+        "phone": "+7 999 765-43-21",
+        "company_name": None,
+    },
 ]
 
 

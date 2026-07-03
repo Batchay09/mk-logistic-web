@@ -11,15 +11,14 @@ type Status = "loading" | "ok" | "error"
 
 function VerifyContent() {
   const token = useSearchParams().get("token")
-  const [status, setStatus] = useState<Status>("loading")
-  const [message, setMessage] = useState("")
+  // Начальное состояние выводим из наличия токена — без синхронного setState в effect.
+  const [status, setStatus] = useState<Status>(token ? "loading" : "error")
+  const [message, setMessage] = useState(
+    token ? "" : "Ссылка не содержит токен подтверждения",
+  )
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error")
-      setMessage("Ссылка не содержит токен подтверждения")
-      return
-    }
+    if (!token) return
     api
       .post("/auth/verify-email", { token })
       .then(() => setStatus("ok"))
