@@ -2,8 +2,8 @@
 
 Веб-приложение для доставки грузов на склады Wildberries и Ozon. Альтернатива Telegram-боту [`MK tranzit`](https://github.com/Batchay09) для клиентов с заблокированным TG. Полный функционал бота: кабинеты клиента, менеджера и администратора.
 
-**Production:** https://mk-logistic.ru *(планируется)*  
-**Stack:** FastAPI · Next.js 15 · PostgreSQL · Docker · Nginx
+**Staging:** https://mk.da-net.net · **Production:** https://mk-logistic.ru *(планируется)*  
+**Stack:** FastAPI · Next.js 16 · PostgreSQL · Docker · Nginx
 
 ---
 
@@ -19,12 +19,19 @@ cd mk-logistic-web
 
 → Backend на `http://localhost:8001` (Swagger: `/docs`), frontend на `http://localhost:3000`.
 
-Тестовые юзеры (после первого запуска):
+Тестовые юзеры — создаёт сид-скрипт (пароль из `SEED_PASSWORD`, дефолт `devpass123`):
 
-| Email | Пароль | Роль |
-|---|---|---|
-| `admin@mk-logistic.ru` | `232526` | Админ |
-| `client@test.ru` | `232526` | Клиент |
+```bash
+cd backend && SEED_PASSWORD=devpass123 .venv/bin/python scripts/seed_test_users.py
+```
+
+| Email | Роль |
+|---|---|
+| `admin@mk-logistic.ru` | Админ |
+| `manager@test.ru` | Менеджер |
+| `client@test.ru` | Клиент |
+
+> Скрипт защищён: откажется работать, если `ENVIRONMENT=production` или `DATABASE_URL` не SQLite.
 
 ### Локально на Postgres (через Docker)
 
@@ -59,7 +66,7 @@ mk-logistic-web/
 │   ├── app/api/          роутеры: auth, client, manager, admin, calculator, payments, stickers
 │   ├── app/services/     calculator, sticker, audit, reports, email (реюз из бота)
 │   └── migrations/       Alembic
-├── frontend/             Next.js 15 App Router + shadcn/ui + Tailwind v4
+├── frontend/             Next.js 16 App Router + shadcn/ui + Tailwind v4
 │   ├── app/              страницы (clients, manager, admin)
 │   ├── components/       ui/, features/, layout/
 │   └── public/brand/     логотип, иллюстрации (DaNet design system)
@@ -77,13 +84,17 @@ mk-logistic-web/
 
 ## Ключевые фичи
 
-- **Auth** — email + пароль, JWT в httpOnly cookie. 3 роли: client / manager / admin.
+- **Auth** — email + пароль, JWT в httpOnly cookie. 3 роли: client / manager / admin. Rate-limiting, смена пароля.
 - **Калькулятор тарифов** — расчёт цены по маркетплейсу/складу/коробкам, паллет-режим автоматом при ≥11 коробок.
 - **Визард создания заказа** — 6 шагов с прогрессом и сводкой.
+- **Кабинет клиента** — профиль, компании (CRUD), корзина, заказы, поддержка.
+- **Кабинет менеджера** — проверка оплат с провалом в детали заказа, поиск, Excel-отчёты, рассылка.
+- **Чат поддержки** — переписка клиент↔менеджер на сайте (виджет у клиента, инбокс у менеджера), вложения-картинки, polling.
 - **Стикеры** — PDF 58×40мм с QR-кодом, по одному на коробку.
-- **YooKassa** — webhook для автоподтверждения карточных оплат, СБП по реквизитам.
-- **Email-уведомления** — через SMTP Yandex (вместо Telegram).
+- **YooKassa** — webhook с верификацией платежа через API, СБП по реквизитам.
+- **Email-уведомления** — через SMTP (SpaceWeb на staging), best-effort.
 - **Audit log** — все изменения справочников, ретенция 30 дней, rollback.
+- **Дизайн Aurora Glass** — иммёрсивный стиль (стекло, ауры, свечение) во всём приложении, light/dark через токены.
 
 ---
 
@@ -107,7 +118,7 @@ Fallback (если ключ не настроен): `SSHPASS='...' bash deploy-s
 
 ## База данных
 
-PostgreSQL общая с [`MK tranzit`](https://github.com/Batchay09) (Telegram-ботом). Миграция `0002_add_email_auth` добавляет nullable-поля (`email`, `password_hash`, `email_verified_at`, `yookassa_payment_id`) — бот эти колонки не трогает, оба сервиса работают параллельно на одной БД.
+PostgreSQL общая с [`MK tranzit`](https://github.com/Batchay09) (Telegram-ботом). Миграция `0002_add_email_auth` добавляет nullable-поля (`email`, `password_hash`, `email_verified_at`, `yookassa_payment_id`), `0003`/`0004` — отдельные таблицы чата (`support_conversations`, `support_messages`). Бот эти колонки/таблицы не трогает — оба сервиса работают параллельно на одной БД.
 
 При изменении `backend/app/db/models.py`:
 

@@ -1,52 +1,58 @@
 # TODO — МК Логистик Web
 
 Открытые задачи и известные баги. Бери сверху, отмечай выполненные `[x]`.
+Актуальный обзор фич → `CLAUDE.md`. Staging: https://mk.da-net.net
 
 ---
 
-## 🔴 До production-запуска
+## 🔴 До production-запуска (нужны доступы/действия Азамата)
 
-- [ ] Купить домен → DNS → обновить `nginx/nginx.conf` для `mk-logistic.ru`
-- [ ] HTTPS через Let's Encrypt (certbot в docker-compose.yml)
-- [ ] Заполнить `.env` на VPS (`SECRET_KEY`, SMTP, YooKassa, ADMIN_*)
-- [ ] Подключить ЮKassa: `shop_id` + `secret_key` + настроить webhook URL `https://mk-logistic.ru/payments/yookassa/webhook`
-- [x] SMTP настроен на staging (SpaceWeb smtp.spaceweb.ru:465, auth проверен) — для прода задать креды в `.env`
-- [ ] Первый `./deploy.sh`, проверить что бот всё ещё работает на той же БД
+- [ ] Купить домен → DNS → обновить `nginx/nginx.conf` для боевого домена
+- [ ] HTTPS на **проде** через Let's Encrypt (на staging HTTPS уже есть)
+- [ ] Заполнить боевой `.env` на VPS (`SECRET_KEY`, SMTP, YooKassa, ADMIN_*)
+- [ ] Подключить ЮKassa: `shop_id` + `secret_key` + webhook URL на прод-домен
+- [ ] Первый `./deploy.sh` на прод, проверить что бот работает на той же БД
 - [ ] **Бэкапы Postgres** — cron `pg_dump` ежедневно + ротация 7 дней
-- [ ] **Мониторинг** — Healthchecks.io / UptimeRobot на `/healthz`, алерт в Telegram при падении
-- [ ] **Disaster recovery** — документ `docs/DR.md` «сервер умер — что делать»
+- [ ] **Мониторинг** — Healthchecks.io / UptimeRobot на `/health`, алерт в Telegram
+- [ ] **Disaster recovery** — документ `docs/DR.md`
 - [ ] Структурированное логирование (json + ротация) вместо stdout
 
-## 🟠 Недостающие страницы клиента
+## 🟢 Качество / тех-долг
 
-(Папки в `frontend/app/` существуют, но без `page.tsx` → 404)
+- [ ] Unit-тесты `backend/tests/` (Calculator, Auth, Chat, Attachments) — каталог пустой
+- [ ] E2E (Playwright): register → login → order → pay; чат клиент↔менеджер
+- [ ] CI `.github/workflows/check.yml`: tsc + ruff + **pip-audit** (по итогам аудита)
+- [ ] Pre-commit хуки (ruff + eslint)
+- [ ] Апгрейд `fastapi`/`starlette` до актуальных (CVE-2025-54121) — с тестированием
+- [ ] Retry для SMTP/YooKassa; рассылка/broadcast — вынести в BackgroundTasks
+- [ ] Вложения чата: ретенция/вынос в объектное хранилище (S3/MinIO) вместо `bytea` при росте объёма
+- [ ] `.with_for_update()` на checkout/создание платежа (гонка при двойном сабмите)
+- [ ] Order detail timeline статусов (vertical stepper)
+- [ ] Браузерный QA страниц менеджера/админа
 
-- [x] `/profile` — редактирование имени, телефона, компании + смена пароля (форма + `POST /auth/change-password`)
-- [x] `/companies` — CRUD `CompanyProfile` (юр. лица для стикеров)
-- [x] `/support` — форма обратной связи + контакты
-- [x] `/reset-password` — восстановление по email-токену
-- [x] `/verify-email` — обработка ссылки подтверждения email из welcome-письма
+## 🟡 Возможные улучшения чата
 
-## 🟡 Менеджер
+- [ ] Realtime через WebSocket (сейчас polling 3–5 сек) — при необходимости
+- [ ] Чат по конкретному заказу (кнопка «Обсудить» в карточке заказа)
+- [ ] Defense-in-depth: role-guard в `app/(admin|manager)/layout.tsx` (сейчас гейт только на бэке)
 
-- [x] Seed manager-юзера в `backend/scripts/seed_test_users.py` (manager@test.ru)
-- [ ] Браузерный QA `/manager/payments`, `/manager/search`, `/manager/reports`
-- [x] `/manager/broadcast` — массовая рассылка email клиентам (форма + `POST /manager/broadcast`)
+## ✅ Сделано (крупные вехи)
 
-## 🟢 Улучшения
+- [x] **Редизайн Aurora Glass** — весь сайт (лендинг + кабинет + авторизация)
+- [x] Страницы клиента: `/profile` (+ смена пароля), `/companies` (CRUD), `/support`, `/reset-password`, `/verify-email`
+- [x] Кабинет менеджера: `/manager/broadcast`, **drill-in в заказ** `/manager/orders/[id]`, seed `manager@test.ru`
+- [x] **Чат поддержки** клиент↔менеджер: виджет + инбокс, бейджи непрочитанного, polling
+- [x] **Вложения-картинки** в чат (JPEG/PNG/WEBP ≤5 МБ, валидация Pillow)
+- [x] **Аудит безопасности** + фиксы: rate-limit по X-Real-IP, webhook ЮKassa через API,
+      Content-Disposition (кириллица), deferred BLOB, лимиты размеров, апгрейд jose/multipart/Pillow
+- [x] SMTP на staging (SpaceWeb `smtp.spaceweb.ru:465`)
+- [x] Staging-деплой на HTTPS (`mk.da-net.net`)
 
-- [ ] Order detail timeline статусов (vertical stepper, как в `Screens.jsx` дизайн-системы)
-- [ ] Unit-тесты `backend/tests/` (Calculator, Auth, Audit) — сейчас каталог пустой
-- [ ] E2E-тесты (Playwright) для критических flow: register → login → create order → pay
-- [ ] CI: `.github/workflows/check.yml` для tsc + ruff *(добавлено)*
-- [ ] Pre-commit хуки (ruff + eslint) — на push сейчас ничего не запускается локально
-- [ ] Retry для SMTP/YooKassa — не терять operations при сетевых сбоях
+## 🐛 Известные баги
 
-## 🐛 Известные баги (не критичные)
-
-- [ ] При повторных `fill` через DevTools/Playwright значение поля удваивается — не баг приложения, поведение dom inputs (фиксится через native setter)
-- [ ] Buttons `Создание заказа` + `Добавить в корзину`: после успеха корзина не инвалидирует cache — иногда счётчик в sidebar обновляется только при ручном refresh
+- [x] Корзина не инвалидировала cache после создания заказа — мастер теперь чистит `cart`+`orders`
+- [ ] При повторных `fill` через DevTools/Playwright значение поля удваивается — поведение dom inputs (не баг приложения)
 
 ---
 
-_Обновлено: 2026-04-26._
+_Обновлено: 2026-07-04._

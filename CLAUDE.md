@@ -118,8 +118,8 @@ bash deploy-staging.sh
 
 | Роль | Доступ |
 |------|--------|
-| `client` | `/dashboard`, `/orders/*`, `/cart`, `/profile`, `/companies`, `/support` |
-| `manager` | `/manager/*` (платежи, поиск, отчёты) |
+| `client` | `/dashboard`, `/orders/*`, `/cart`, `/profile`, `/companies`, `/support` + плавающий чат-виджет поддержки |
+| `manager` | `/manager/*` — dashboard, payments (провал в заказ → `/manager/orders/[id]`), search, reports, **chats** (инбокс поддержки), **broadcast** (рассылка) |
 | `admin` | `/admin/*` (пользователи, направления, тарифы, расписание, аудит) |
 
 ### Как создать admin / manager
@@ -149,7 +149,9 @@ bash deploy-staging.sh
 - **Docker сеть** — `mk-web` (внутренняя) + `mk-shared` (external, общая с ботом для PostgreSQL)
 - **Next.js standalone** — `output: "standalone"` в `next.config.ts` для минимального Docker-образа
 - **Email best-effort** — `services/email.py::_send` глотает SMTP-ошибки и логирует warning. Бизнес-операции (заказ, оплата) не падают если SMTP не настроен или недоступен. Хосты с `example.com`/`localhost` пропускаются как заглушки.
-- **Дизайн-система через токены** — никакого хардкода цветов в коде (`bg-[#D4512B]` ❌). Используем `bg-primary`, `text-foreground`, `border-border` — они автоматически адаптируются к light/dark теме. Полная справка → `frontend/DESIGN_SYSTEM.md`.
+- **Чат поддержки** — переписка клиент↔менеджер прямо на сайте (`support_conversations`/`support_messages`, миграции 0003–0004), обновление polling 3–5 сек. У клиента — плавающий виджет `ChatWidget` на всех страницах кабинета (пункт «Поддержка» открывает его), у менеджера — инбокс `/manager/chats` с живым бейджем непрочитанного. Вложения-картинки (JPEG/PNG/WEBP ≤5 МБ) валидируются и пере-кодируются через Pillow (`services/attachments.py`), хранятся в БД (`attachment_data`, `deferred`), отдаются auth-gated. Эндпоинты: `/client/chat*`, `/manager/chats*`.
+- **Безопасность** — rate-limiting (slowapi, ключ по `X-Real-IP` — не подделать), fail-fast `SECRET_KEY` в prod, webhook ЮKassa верифицируется через API (не по телу), экранирование HTML в письмах, валидация/пере-кодирование загружаемых картинок, `X-Real-IP` для IP-проверок. Пройден аудит — CRITICAL нет.
+- **Дизайн — Aurora Glass** — иммёрсивный стиль во всём приложении: брендовый оранжевый, стекло, световые ауры, свечение, глубина. Никакого хардкода цветов (`bg-[#D4512B]` ❌) — только токены (`bg-primary`, `text-foreground`, `border-border`), автоадаптация light/dark. Переиспользуемые классы/компоненты в `frontend/app/globals.css` (`.glass`, `.glass-brand`, `.aurora-blob`, `.btn-shine`) и `AuroraHero`. Справка → `frontend/DESIGN_SYSTEM.md`.
 
 ## Переменные окружения (.env)
 
@@ -179,10 +181,12 @@ MANAGER_PASSWORD=
 MANAGER_EMAILS=manager@example.com
 ```
 
-## Следующие шаги
+## Статус и следующие шаги
 
-1. Купить/настроить домен, обновить `nginx/nginx.conf` для HTTPS
-2. Создать `.env` на VPS и запустить `./deploy.sh`
-3. Подключить ЮKassa (shop_id + secret_key, настроить webhook URL)
-4. Настроить SMTP Yandex (app password)
-5. Создать страницы: `/verify-email`, `/reset-password`, `/profile`, `/companies`, `/support`, `/manager/broadcast`
+**Готово (staging https://mk.da-net.net):** редизайн Aurora Glass, все страницы клиента (профиль, компании, поддержка, verify/reset), кабинет менеджера (payments + drill-in в заказ, search, reports, broadcast, chats), чат поддержки с вложениями, SMTP (SpaceWeb), security-хардненинг по аудиту, staging HTTPS. Актуальный список задач → `TODO.md`.
+
+**Для прод-запуска (осталось):**
+1. Домен + HTTPS на **проде** (staging уже на HTTPS; прод `nginx/nginx.conf` — HTTP)
+2. Реальные ключи ЮKassa (shop_id + secret_key) + webhook URL на прод-домен, боевой `.env`, первый `./deploy.sh`
+3. Бэкапы Postgres (cron `pg_dump`), мониторинг/uptime, DR-документ, структурные логи
+4. Тесты (backend unit + E2E Playwright), CI (tsc/ruff + pip-audit), pre-commit хуки
