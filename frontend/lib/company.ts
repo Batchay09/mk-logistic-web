@@ -61,14 +61,14 @@ export const COMPANY: Company = {
     shortName: "ИП Узденов Т. А.",
     inn: "090903525542",
     ogrnip: "322090000019787",
-    address: "Карачаево-Черкесская Республика, с. Красный Курган",
+    address: "с. Красный Курган, Карачаево-Черкесская Республика",
     taxNote: "Применяется УСН. НДС не облагается.",
   },
 
   contacts: {
-    phone: FILL_ME, // FILL_ME напр. "+7 928 000-00-00" — в ЕГРИП телефона нет
+    phone: FILL_ME, // телефон пока не показываем (нет) — впиши, когда появится
     email: "uzdenovtau@mail.ru", // из ЕГРИП; замени на отдельный support@, если заведёшь
-    workingHours: FILL_ME, // FILL_ME напр. "Пн–Пт, 9:00–18:00 (МСК)"
+    workingHours: "Пн–Пт, 9:00–18:00 (МСК)",
     telegram: FILL_ME, // FILL_ME напр. "https://t.me/mklogistic" (или "")
     whatsapp: FILL_ME, // FILL_ME напр. "https://wa.me/79280000000" (или "")
   },

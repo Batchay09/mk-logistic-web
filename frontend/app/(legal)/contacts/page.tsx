@@ -12,6 +12,55 @@ export const metadata: Metadata = {
 
 const { contacts, requisites } = COMPANY
 
+interface ContactItem {
+  icon: React.ReactNode
+  label: string
+  value: string
+  href?: string
+}
+
+/**
+ * Собираем только заполненные способы связи — пустые (например, телефон,
+ * которого пока нет) не показываем, чтобы страница выглядела завершённой.
+ * Адрес показываем всегда — он берётся из реквизитов.
+ */
+const CONTACT_ITEMS: ContactItem[] = [
+  hasContact(contacts.phone) && {
+    icon: <Phone className="size-5" aria-hidden />,
+    label: "Телефон",
+    value: contacts.phone,
+    href: telHref(contacts.phone),
+  },
+  hasContact(contacts.email) && {
+    icon: <Mail className="size-5" aria-hidden />,
+    label: "Email",
+    value: contacts.email,
+    href: `mailto:${contacts.email}`,
+  },
+  hasContact(contacts.workingHours) && {
+    icon: <Clock className="size-5" aria-hidden />,
+    label: "Часы работы",
+    value: contacts.workingHours,
+  },
+  {
+    icon: <MapPin className="size-5" aria-hidden />,
+    label: "Адрес",
+    value: requisites.address,
+  },
+  hasContact(contacts.telegram) && {
+    icon: <Send className="size-5" aria-hidden />,
+    label: "Telegram",
+    value: contacts.telegram,
+    href: contacts.telegram,
+  },
+  hasContact(contacts.whatsapp) && {
+    icon: <MessageCircle className="size-5" aria-hidden />,
+    label: "WhatsApp",
+    value: contacts.whatsapp,
+    href: contacts.whatsapp,
+  },
+].filter(Boolean) as ContactItem[]
+
 interface Row {
   label: string
   value: string
@@ -37,44 +86,9 @@ export default function ContactsPage() {
       <section className="mb-10">
         <H3 className="mb-4 text-xl sm:text-2xl">Как связаться</H3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <ContactCard
-            icon={<Phone className="size-5" aria-hidden />}
-            label="Телефон"
-            value={contacts.phone}
-            href={hasContact(contacts.phone) ? telHref(contacts.phone) : undefined}
-          />
-          <ContactCard
-            icon={<Mail className="size-5" aria-hidden />}
-            label="Email"
-            value={contacts.email}
-            href={hasContact(contacts.email) ? `mailto:${contacts.email}` : undefined}
-          />
-          <ContactCard
-            icon={<Clock className="size-5" aria-hidden />}
-            label="Часы работы"
-            value={contacts.workingHours}
-          />
-          <ContactCard
-            icon={<MapPin className="size-5" aria-hidden />}
-            label="Адрес"
-            value={requisites.address}
-          />
-          {hasContact(contacts.telegram) && (
-            <ContactCard
-              icon={<Send className="size-5" aria-hidden />}
-              label="Telegram"
-              value={contacts.telegram}
-              href={contacts.telegram}
-            />
-          )}
-          {hasContact(contacts.whatsapp) && (
-            <ContactCard
-              icon={<MessageCircle className="size-5" aria-hidden />}
-              label="WhatsApp"
-              value={contacts.whatsapp}
-              href={contacts.whatsapp}
-            />
-          )}
+          {CONTACT_ITEMS.map((item) => (
+            <ContactCard key={item.label} item={item} />
+          ))}
         </div>
       </section>
 
@@ -102,32 +116,15 @@ export default function ContactsPage() {
   )
 }
 
-interface ContactCardProps {
-  icon: React.ReactNode
-  label: string
-  value: string
-  href?: string
-}
-
-function ContactCard({ icon, label, value, href }: ContactCardProps) {
-  const filled = hasContact(value)
-  const display = filled ? value : "уточняется"
-
+function ContactCard({ item }: { item: ContactItem }) {
   const inner = (
     <>
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-        {icon}
+        {item.icon}
       </span>
       <span className="flex flex-col">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span
-          className={
-            "text-[15px] font-medium " +
-            (filled ? "text-foreground" : "text-muted-foreground italic")
-          }
-        >
-          {display}
-        </span>
+        <span className="text-xs text-muted-foreground">{item.label}</span>
+        <span className="text-[15px] font-medium text-foreground">{item.value}</span>
       </span>
     </>
   )
@@ -135,9 +132,9 @@ function ContactCard({ icon, label, value, href }: ContactCardProps) {
   const base =
     "flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-colors"
 
-  if (href && filled) {
+  if (item.href) {
     return (
-      <a href={href} className={base + " tap-target hover:border-primary/40 hover:bg-muted/40"}>
+      <a href={item.href} className={base + " tap-target hover:border-primary/40 hover:bg-muted/40"}>
         {inner}
       </a>
     )
