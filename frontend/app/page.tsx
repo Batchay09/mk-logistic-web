@@ -21,6 +21,7 @@ import { HowItWorks } from "@/components/features/HowItWorks"
 import { Trust } from "@/components/features/Trust"
 import { Faq } from "@/components/features/Faq"
 import { PricingTeaser } from "@/components/features/PricingTeaser"
+import { SiteFooter } from "@/components/layout/site-footer"
 
 const features = [
   {
@@ -206,27 +207,7 @@ export default function LandingPage() {
       </section>
 
       {/* ====================== FOOTER ====================== */}
-      <footer className="bg-sidebar text-sidebar-foreground/70 mt-auto">
-        <Container size="wide">
-          <div className="py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
-            <p>© 2026 МК Логистик. Доставка на склады Wildberries и Ozon.</p>
-            <div className="flex items-center gap-5">
-              <Link
-                href="/login"
-                className="hover:text-sidebar-foreground transition-colors"
-              >
-                Войти
-              </Link>
-              <Link
-                href="/register"
-                className="hover:text-sidebar-foreground transition-colors"
-              >
-                Регистрация
-              </Link>
-            </div>
-          </div>
-        </Container>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

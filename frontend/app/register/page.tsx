@@ -22,6 +22,9 @@ const schema = z.object({
   confirm_password: z.string(),
   phone: z.string().optional(),
   company_name: z.string().optional(),
+  accept: z.boolean().refine((v) => v === true, {
+    message: "Необходимо принять условия",
+  }),
 }).refine((d) => d.password === d.confirm_password, {
   message: "Пароли не совпадают",
   path: ["confirm_password"],
@@ -34,14 +37,15 @@ export default function RegisterPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: "", email: "", password: "", confirm_password: "", phone: "", company_name: "" },
+    defaultValues: { full_name: "", email: "", password: "", confirm_password: "", phone: "", company_name: "", accept: false },
   })
 
   async function onSubmit(data: FormData) {
     setLoading(true)
     try {
-      const { confirm_password: _, ...payload } = data
-      void _
+      const { confirm_password: _c, accept: _a, ...payload } = data
+      void _c
+      void _a
       await api.post<CurrentUser>("/auth/register", payload)
       toast.success("Аккаунт создан! Проверьте email для подтверждения.")
       router.push("/dashboard")
@@ -108,6 +112,33 @@ export default function RegisterPage() {
                 </FormItem>
               )} />
             </div>
+
+            <FormField control={form.control} name="accept" render={({ field }) => (
+              <FormItem className="mt-1">
+                <div className="flex items-start gap-2.5">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border accent-primary"
+                    />
+                  </FormControl>
+                  <FormLabel className="text-xs font-normal leading-relaxed text-muted-foreground">
+                    Я принимаю условия{" "}
+                    <Link href="/offer" target="_blank" className="text-primary hover:underline">
+                      публичной оферты
+                    </Link>{" "}
+                    и даю согласие на обработку персональных данных согласно{" "}
+                    <Link href="/privacy" target="_blank" className="text-primary hover:underline">
+                      политике конфиденциальности
+                    </Link>
+                    .
+                  </FormLabel>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             <Button type="submit" disabled={loading} size="lg" className="w-full mt-2">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

@@ -3,7 +3,19 @@ import { NextRequest, NextResponse } from "next/server"
 // Префиксы публичных разделов. Корень "/" проверяется отдельно точным
 // сравнением — иначе startsWith("/") сматчил бы АБСОЛЮТНО любой путь и открыл
 // доступ к /admin, /manager, /dashboard без авторизации.
-const PUBLIC_PREFIXES = ["/login", "/register", "/verify-email", "/reset-password", "/api/"]
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/register",
+  "/verify-email",
+  "/reset-password",
+  // Публичные юридические страницы — должны открываться без входа,
+  // иначе модератор эквайринга (и клиент) их не увидит.
+  "/offer",
+  "/privacy",
+  "/contacts",
+  "/delivery",
+  "/api/",
+]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
