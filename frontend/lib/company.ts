@@ -66,8 +66,8 @@ export const COMPANY: Company = {
   },
 
   contacts: {
-    phone: FILL_ME, // FILL_ME напр. "+7 928 000-00-00"
-    email: FILL_ME, // FILL_ME напр. "info@mk-logistic.ru"
+    phone: FILL_ME, // FILL_ME напр. "+7 928 000-00-00" — в ЕГРИП телефона нет
+    email: "uzdenovtau@mail.ru", // из ЕГРИП; замени на отдельный support@, если заведёшь
     workingHours: FILL_ME, // FILL_ME напр. "Пн–Пт, 9:00–18:00 (МСК)"
     telegram: FILL_ME, // FILL_ME напр. "https://t.me/mklogistic" (или "")
     whatsapp: FILL_ME, // FILL_ME напр. "https://wa.me/79280000000" (или "")
