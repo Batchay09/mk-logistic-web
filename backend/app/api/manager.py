@@ -126,6 +126,35 @@ async def cancel_payment(
     return {"ok": True}
 
 
+@router.get("/orders/to-ship", response_model=List[OrderBrief])
+async def orders_to_ship(
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Очередь на отправку: оплаченные заказы, ещё не взятые в работу (PAID)."""
+    result = await session.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.destination))
+        .where(Order.status == OrderStatus.PAID)
+        .order_by(Order.created_at.asc())
+    )
+    return [_brief(o) for o in result.scalars().all()]
+
+
+@router.post("/orders/{order_id:int}/ship")
+async def take_order_to_ship(
+    order_id: int,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Менеджер берёт оплаченный заказ в работу: PAID → ASSIGNED (уходит из очереди)."""
+    order = await _get_order(order_id, session, [OrderStatus.PAID])
+    order.status = OrderStatus.ASSIGNED
+    logger.info("Менеджер id=%s взял заказ #%s в работу", current_user.id, order.id)
+    await session.commit()
+    return {"ok": True}
+
+
 @router.get("/orders/search", response_model=List[OrderBrief])
 async def search_orders(
     company: Optional[str] = None,

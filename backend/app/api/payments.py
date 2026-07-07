@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.dependencies import require_client
 from app.db.models import Order, OrderStatus, PaymentMethod, User
 from app.db.session import get_db
-from app.services.email import notify_client_payment_confirmed
+from app.services.email import notify_client_payment_confirmed, notify_managers_new_order
 from app.services.sticker import StickerService
 
 logger = logging.getLogger(__name__)
@@ -199,11 +199,13 @@ async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get
         )
         raise HTTPException(status_code=400, detail="Сумма платежа не совпадает с заказом")
 
+    newly_paid_ids: List[int] = []
     for order in orders:
         if order.status == OrderStatus.PAID:  # идемпотентность
             continue
 
         order.status = OrderStatus.PAID
+        newly_paid_ids.append(order.id)
 
         # Send stickers to client
         pdf_bytes = None
@@ -221,4 +223,24 @@ async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get
                 pass
 
     await session.commit()
+
+    # Уведомляем менеджеров о новом оплаченном заказе. Только при первом
+    # переходе в PAID — webhook от ЮKassa может прийти повторно (идемпотентность).
+    if newly_paid_ids:
+        try:
+            first_user = orders[0].user
+            client_name = (
+                (first_user.full_name or first_user.email) if first_user else None
+            ) or "Клиент"
+            pickup_info = (
+                "Требуется забор"
+                if any(o.service_pickup and o.pickup_address_id for o in orders)
+                else ""
+            )
+            await notify_managers_new_order(
+                newly_paid_ids, client_name, float(expected_total), pickup_info
+            )
+        except Exception:
+            logger.warning("Не удалось уведомить менеджеров об оплате заказов %s", newly_paid_ids)
+
     return {"ok": True}

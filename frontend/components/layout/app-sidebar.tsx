@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   LayoutDashboard, Package, ShoppingCart, History, User, Building2,
   HeadphonesIcon, Truck, Users, MapPin, DollarSign, Calendar, ClipboardList,
-  LogOut, BarChart3, Search, Menu, Megaphone, MessageCircle
+  LogOut, BarChart3, Search, Menu, Megaphone, MessageCircle, PackageCheck
 } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -35,6 +35,7 @@ const clientNav: NavItem[] = [
 const managerNav: NavItem[] = [
   { href: "/manager/dashboard", label: "Главная", icon: LayoutDashboard },
   { href: "/manager/payments", label: "Проверка оплат", icon: DollarSign },
+  { href: "/manager/to-ship", label: "К отправке", icon: PackageCheck },
   { href: "/manager/search", label: "Поиск заказов", icon: Search },
   { href: "/manager/reports", label: "Excel / Отчёты", icon: BarChart3 },
   { href: "/manager/chats", label: "Чаты", icon: MessageCircle },
