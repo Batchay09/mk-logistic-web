@@ -119,7 +119,7 @@ bash deploy-staging.sh
 | Роль | Доступ |
 |------|--------|
 | `client` | `/dashboard`, `/orders/*`, `/cart`, `/profile`, `/companies`, `/support` + плавающий чат-виджет поддержки |
-| `manager` | `/manager/*` — dashboard, payments (провал в заказ → `/manager/orders/[id]`), search, reports, **chats** (инбокс поддержки), **broadcast** (рассылка) |
+| `manager` | `/manager/*` — dashboard, **orders** (вкладки по этапам + таймлайн, провал в `/manager/orders/[id]`), payments (проверка оплат), search, reports, **chats** (инбокс поддержки), **broadcast** (рассылка) |
 | `admin` | `/admin/*` (пользователи, направления, тарифы, расписание, аудит) |
 
 ### Как создать admin / manager
@@ -142,8 +142,11 @@ bash deploy-staging.sh
 
 ## Особенности
 
-- **YooKassa webhook** `POST /payments/yookassa/webhook` — `payment.succeeded` → статус PAID → PDF на email клиенту
-- **SBP оплата** — реквизиты в dialog, менеджер подтверждает вручную
+- **Оплата — только ЮKassa (безнал)**. Корзина «Безналичный» → `POST /payments/yookassa/create` напрямую (заказы остаются NEW, пока платёж не создан) → редирект на оплату. СБП-перевод по реквизитам с ручным подтверждением **убран** (вместе с захардкоженными реквизитами). Кнопка «Наличные» осталась.
+- **YooKassa webhook** `POST /payments/yookassa/webhook` — `payment.succeeded` (верификация через API, не по телу) → статус PAID → PDF-стикеры на email клиенту + email-уведомление менеджерам.
+- **Пайплайн заказа у менеджера** — `/manager/orders` вкладки по этапам (К отправке/В работе/Забран/В пути/Доставлен, `GET /manager/orders/by-status`, `/orders/counts`), продвижение `POST /manager/orders/{id}/advance` (умный next: «Забрано»/PICKED_UP только при `service_pickup`). Таймлайн этапов в карточке заказа.
+- **Публичные юр-страницы** — `app/(legal)/`: `/offer`, `/privacy`, `/delivery`, `/contacts`. Реквизиты ИП — единый источник `frontend/lib/company.ts` → футер (`SiteFooter`) на всех публичных страницах. Регистрация требует согласия на обработку ПД (152-ФЗ). Всё для прохождения модерации эквайринга.
+- **Паллетизация** — паллетный режим `is_pallet_mode` только от 11 коробок (`BOXES_PER_PALLET`); доставка считается по коробкам со ступенчатым тарифом (`PriceRule.min_qty`: при 11+ включается сниженный «паллетный» тариф); услуга обмотки паллет — опционально +500 ₽ за полную паллету.
 - **sticker.py fallback** — если `tg_id=None` (web-юзер), использует `user.id`
 - **httpOnly cookie** secure=True только в production (`settings.is_production`)
 - **Docker сеть** — `mk-web` (внутренняя) + `mk-shared` (external, общая с ботом для PostgreSQL)
@@ -183,7 +186,7 @@ MANAGER_EMAILS=manager@example.com
 
 ## Статус и следующие шаги
 
-**Готово (staging https://mk.da-net.net):** редизайн Aurora Glass, все страницы клиента (профиль, компании, поддержка, verify/reset), кабинет менеджера (payments + drill-in в заказ, search, reports, broadcast, chats), чат поддержки с вложениями, SMTP (SpaceWeb), security-хардненинг по аудиту, staging HTTPS. Актуальный список задач → `TODO.md`.
+**Готово (staging https://mk.da-net.net):** редизайн Aurora Glass, все страницы клиента (профиль, компании, поддержка, verify/reset), кабинет менеджера (пайплайн заказов по этапам + таймлайн, payments, search, reports, broadcast, chats), чат поддержки с вложениями, публичные юр-страницы + реквизиты + согласие на ПД, оплата ЮKassa (тестовый магазин, сквозной платёж прошёл; безнал только через ЮKassa), SMTP (SpaceWeb), security-хардненинг по аудиту, staging HTTPS. Актуальный список задач → `TODO.md`.
 
 **Для прод-запуска (осталось):**
 1. Домен + HTTPS на **проде** (staging уже на HTTPS; прод `nginx/nginx.conf` — HTTP)
