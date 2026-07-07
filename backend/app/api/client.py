@@ -276,14 +276,12 @@ async def checkout(
     await notify_managers_new_order([o.id for o in orders], client_name, total, pickup_info)
 
     if pm == PaymentMethod.CASHLESS:
-        # Return SBP payment info (YooKassa integration done separately in /payments)
+        # Безнал — оплата только через ЮKassa. Заказы переведены в AWAITING_PAYMENT,
+        # сам платёж инициирует фронтенд через POST /payments/yookassa/create.
         return {
             "status": "awaiting_payment",
             "order_ids": [o.id for o in orders],
             "total": total,
-            "sbp_phone": "+79384980009",
-            "sbp_card": "2202208127908078",
-            "note": f"Оплата за услуги (Заказы: {', '.join(f'#{o.id}' for o in orders)})",
         }
 
     # CASH: generate and return sticker link

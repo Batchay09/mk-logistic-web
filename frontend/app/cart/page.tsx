@@ -37,16 +37,18 @@ interface CheckoutResult {
   status: string
   order_ids: number[]
   total?: number
-  sbp_phone?: string
-  sbp_card?: string
-  note?: string
+}
+
+interface YooKassaPayment {
+  payment_id: string
+  confirmation_url: string
+  total: number
 }
 
 export default function CartPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [checkoutResult, setCheckoutResult] = useState<CheckoutResult | null>(null)
   const [paying, setPaying] = useState(false)
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({
@@ -73,16 +75,23 @@ export default function CartPage() {
         order_ids: orders.map((o) => o.id),
         payment_method: method,
       })
-      setCheckoutResult(result)
       qc.invalidateQueries({ queryKey: ["cart"] })
       qc.invalidateQueries({ queryKey: ["orders"] })
+
       if (method === "cash") {
         toast.success("Заказ(ы) подтверждены! Стикеры будут высланы на email.")
         router.push("/orders/active")
+        return
       }
+
+      // Безнал — создаём платёж в ЮKassa и уводим на страницу оплаты
+      const payment = await api.post<YooKassaPayment>("/payments/yookassa/create", {
+        order_ids: result.order_ids,
+        return_url: `${window.location.origin}/orders/active`,
+      })
+      window.location.href = payment.confirmation_url
     } catch (e: Error | unknown) {
       toast.error(e instanceof Error ? e.message : "Ошибка оплаты")
-    } finally {
       setPaying(false)
     }
   }
@@ -253,40 +262,6 @@ export default function CartPage() {
         </DialogContent>
       </Dialog>
 
-      {/* SBP payment dialog */}
-      {checkoutResult?.status === "awaiting_payment" && (
-        <Dialog open onOpenChange={() => setCheckoutResult(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Оплата через СБП</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 text-sm">
-              <p className="font-medium text-primary text-base">
-                Сумма: {checkoutResult.total?.toLocaleString("ru-RU")} ₽
-              </p>
-              <div className="bg-muted rounded-xl p-3 space-y-1 border border-border">
-                <p><span className="text-muted-foreground">Карта:</span> {checkoutResult.sbp_card}</p>
-                <p><span className="text-muted-foreground">Телефон:</span> {checkoutResult.sbp_phone}</p>
-                <p><span className="text-muted-foreground">Назначение:</span> {checkoutResult.note}</p>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                После перевода менеджер подтвердит оплату и вышлет стикеры на email.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button
-                className="btn-shine rounded-full px-6"
-                onClick={() => {
-                  setCheckoutResult(null)
-                  router.push("/orders/active")
-                }}
-              >
-                Я оплатил
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </LayoutWithSidebar>
   )
 }
