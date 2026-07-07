@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import PriceRule, ScheduleRule
 
 BASE_PICKUP_PRICE = 500
-PALLET_PRICE = 500
 BOXES_PER_PALLET = 11
 PALLETIZING_PRICE = 500
 
@@ -21,10 +20,11 @@ class CalculatorService:
         service_pickup: bool,
         service_palletizing: bool,
     ) -> dict:
-        # Паллетный режим показываем всегда; считаем только полные паллеты по 11 коробок.
-        # 11 → 1, 20 → 1, 22 → 2, 33 → 3. Остаток коробок едет отдельно (доставка по коробам).
-        is_pallet_mode = True
+        # Паллетный режим — только когда набирается хотя бы одна полная паллета (11+).
+        # Считаем полные паллеты: 11 → 1, 20 → 1, 22 → 2, 33 → 3. Остаток коробок
+        # едет отдельно (доставка по коробкам).
         pallets_count = boxes // BOXES_PER_PALLET
+        is_pallet_mode = boxes >= BOXES_PER_PALLET
 
         rules_q = await session.execute(
             select(PriceRule)

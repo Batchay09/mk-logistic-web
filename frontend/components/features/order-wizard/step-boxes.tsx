@@ -44,6 +44,8 @@ export function StepBoxes({ state, update }: { state: WizardState; update: (p: P
         unit_price: pricing.unit_price,
         pallets_count: pricing.pallets_count,
         is_pallet_mode: pricing.is_pallet_mode,
+        // Коробок стало меньше 11 — паллет нет, сбрасываем услугу паллетизации
+        ...(pricing.is_pallet_mode ? {} : { service_palletizing: false }),
       })
     }
   }, [pricing])
