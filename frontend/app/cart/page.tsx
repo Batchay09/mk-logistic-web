@@ -71,22 +71,23 @@ export default function CartPage() {
     if (!orders.length) return
     setPaying(true)
     try {
-      const result = await api.post<CheckoutResult>("/client/cart/checkout", {
-        order_ids: orders.map((o) => o.id),
-        payment_method: method,
-      })
-      qc.invalidateQueries({ queryKey: ["cart"] })
-      qc.invalidateQueries({ queryKey: ["orders"] })
-
       if (method === "cash") {
+        await api.post<CheckoutResult>("/client/cart/checkout", {
+          order_ids: orders.map((o) => o.id),
+          payment_method: "cash",
+        })
+        qc.invalidateQueries({ queryKey: ["cart"] })
+        qc.invalidateQueries({ queryKey: ["orders"] })
         toast.success("Заказ(ы) подтверждены! Стикеры будут высланы на email.")
         router.push("/orders/active")
         return
       }
 
-      // Безнал — создаём платёж в ЮKassa и уводим на страницу оплаты
+      // Безнал — создаём платёж в ЮKassa напрямую по заказам из корзины.
+      // Заказы остаются в корзине (статус NEW), пока платёж не создан: если
+      // ЮKassa вернёт ошибку, ничего не теряется и оплату можно повторить.
       const payment = await api.post<YooKassaPayment>("/payments/yookassa/create", {
-        order_ids: result.order_ids,
+        order_ids: orders.map((o) => o.id),
         return_url: `${window.location.origin}/orders/active`,
       })
       window.location.href = payment.confirmation_url

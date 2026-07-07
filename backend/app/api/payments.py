@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.dependencies import require_client
-from app.db.models import Order, OrderStatus, User
+from app.db.models import Order, OrderStatus, PaymentMethod, User
 from app.db.session import get_db
 from app.services.email import notify_client_payment_confirmed
 from app.services.sticker import StickerService
@@ -110,6 +110,7 @@ async def create_yookassa_payment(
         yookassa_id = payment.id
         for order in orders:
             order.yookassa_payment_id = yookassa_id
+            order.payment_method = PaymentMethod.CASHLESS
             order.status = OrderStatus.AWAITING_PAYMENT
 
         await session.commit()
