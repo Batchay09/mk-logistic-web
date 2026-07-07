@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { api } from "@/lib/api"
 import { statusMeta } from "@/lib/order-status"
-import { ArrowLeft, Loader2, CheckCircle, XCircle, User, Mail, Phone, MapPin } from "lucide-react"
+import { pipelineSeq, advanceLabel } from "@/lib/manager-pipeline"
+import { ArrowLeft, ArrowRight, Loader2, CheckCircle, XCircle, Check, User, Mail, Phone, MapPin } from "lucide-react"
 
 interface OrderDetail {
   id: number
@@ -77,6 +78,18 @@ export default function ManagerOrderDetailPage({ params }: { params: Promise<{ i
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const advanceMut = useMutation({
+    mutationFn: () => api.post(`/manager/orders/${id}/advance`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["manager-order", id] })
+      qc.invalidateQueries({ queryKey: ["manager-orders"] })
+      qc.invalidateQueries({ queryKey: ["manager-order-counts"] })
+      qc.invalidateQueries({ queryKey: ["manager-to-ship"] })
+      toast.success("Заказ переведён на следующий этап")
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   if (isLoading) return (
     <LayoutWithSidebar role="manager">
       <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -93,6 +106,11 @@ export default function ManagerOrderDetailPage({ params }: { params: Promise<{ i
   const canAct = order.status === "awaiting_payment"
   const acting = confirmMut.isPending || cancelMut.isPending
   const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString("ru-RU") : "—")
+
+  const seq = pipelineSeq(order.service_pickup)
+  const curIdx = seq.indexOf(order.status)
+  const inPipeline = curIdx >= 0
+  const nextLbl = advanceLabel(order.status, order.service_pickup)
 
   return (
     <LayoutWithSidebar role="manager">
@@ -213,6 +231,63 @@ export default function ManagerOrderDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
         </div>
+
+        {/* Этапы выполнения — таймлайн + продвижение */}
+        {inPipeline && (
+          <Card className="relative border-border">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Этапы выполнения</CardTitle></CardHeader>
+            <CardContent>
+              <ol className="relative">
+                {seq.map((s, i) => {
+                  const done = i < curIdx
+                  const now = i === curIdx
+                  const meta = statusMeta(s)
+                  const last = i === seq.length - 1
+                  return (
+                    <li key={s} className={`relative flex gap-3 ${last ? "" : "pb-5"}`}>
+                      {!last && (
+                        <span
+                          aria-hidden
+                          className={`absolute left-[9px] top-5 bottom-0 w-0.5 ${done ? "bg-success" : "bg-border"}`}
+                        />
+                      )}
+                      <span
+                        className={
+                          "relative z-10 mt-0.5 grid size-[19px] shrink-0 place-items-center rounded-full border-2 " +
+                          (done
+                            ? "bg-success border-success text-white"
+                            : now
+                              ? "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20"
+                              : "bg-card border-border")
+                        }
+                      >
+                        {done && <Check className="size-3" aria-hidden />}
+                      </span>
+                      <div className="-mt-0.5">
+                        <p className={now ? "font-semibold text-foreground" : done ? "font-medium text-foreground" : "text-muted-foreground"}>
+                          {meta.label}
+                        </p>
+                        {now && <p className="text-xs text-primary">текущий этап</p>}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+
+              {nextLbl && (
+                <Button
+                  className="btn-shine mt-5 h-12 w-full rounded-full"
+                  onClick={() => advanceMut.mutate()}
+                  disabled={advanceMut.isPending}
+                >
+                  {advanceMut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  {nextLbl}
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Действия для заказов на подтверждении */}
         {canAct && (

@@ -35,7 +35,7 @@ const clientNav: NavItem[] = [
 const managerNav: NavItem[] = [
   { href: "/manager/dashboard", label: "Главная", icon: LayoutDashboard },
   { href: "/manager/payments", label: "Проверка оплат", icon: DollarSign },
-  { href: "/manager/to-ship", label: "К отправке", icon: PackageCheck },
+  { href: "/manager/orders", label: "Заказы", icon: PackageCheck },
   { href: "/manager/search", label: "Поиск заказов", icon: Search },
   { href: "/manager/reports", label: "Excel / Отчёты", icon: BarChart3 },
   { href: "/manager/chats", label: "Чаты", icon: MessageCircle },

@@ -46,6 +46,7 @@ class OrderBrief(BaseModel):
     boxes_count: int
     total_amount: float
     payment_method: Optional[str]
+    service_pickup: bool
     client_name: Optional[str]
     client_email: Optional[str]
     client_phone: Optional[str]
@@ -141,18 +142,83 @@ async def orders_to_ship(
     return [_brief(o) for o in result.scalars().all()]
 
 
-@router.post("/orders/{order_id:int}/ship")
-async def take_order_to_ship(
+# Пайплайн исполнения заказа после оплаты. «Забрано» — только при заборе груза.
+_PIPELINE_FULL = [
+    OrderStatus.PAID, OrderStatus.ASSIGNED, OrderStatus.PICKED_UP,
+    OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED,
+]
+_PIPELINE_NO_PICKUP = [
+    OrderStatus.PAID, OrderStatus.ASSIGNED, OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED,
+]
+_PIPELINE_STATUSES = ("paid", "assigned", "picked_up", "in_transit", "delivered")
+
+
+def _next_pipeline_status(order: Order) -> Optional[OrderStatus]:
+    """Следующий этап заказа или None, если он финальный / вне пайплайна."""
+    seq = _PIPELINE_FULL if order.service_pickup else _PIPELINE_NO_PICKUP
+    if order.status not in seq:
+        return None
+    idx = seq.index(order.status)
+    return seq[idx + 1] if idx + 1 < len(seq) else None
+
+
+@router.get("/orders/by-status", response_model=List[OrderBrief])
+async def orders_by_status(
+    status: str,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Заказы одного этапа пайплайна (для вкладок страницы «Заказы»)."""
+    if status not in _PIPELINE_STATUSES:
+        raise HTTPException(status_code=400, detail="Недопустимый статус")
+    result = await session.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.destination))
+        .where(Order.status == OrderStatus(status))
+        .order_by(Order.created_at.desc())
+        .limit(100)
+    )
+    return [_brief(o) for o in result.scalars().all()]
+
+
+@router.get("/orders/counts")
+async def orders_counts(
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Количество заказов на каждом этапе — для бейджей на вкладках."""
+    rows = (await session.execute(
+        select(Order.status, func.count())
+        .where(Order.status.in_([OrderStatus(s) for s in _PIPELINE_STATUSES]))
+        .group_by(Order.status)
+    )).all()
+    counts = {s: 0 for s in _PIPELINE_STATUSES}
+    for status_val, cnt in rows:
+        counts[status_val.value] = cnt
+    return counts
+
+
+@router.post("/orders/{order_id:int}/advance")
+async def advance_order(
     order_id: int,
     current_user: User = Depends(require_manager),
     session: AsyncSession = Depends(get_db),
 ):
-    """Менеджер берёт оплаченный заказ в работу: PAID → ASSIGNED (уходит из очереди)."""
-    order = await _get_order(order_id, session, [OrderStatus.PAID])
-    order.status = OrderStatus.ASSIGNED
-    logger.info("Менеджер id=%s взял заказ #%s в работу", current_user.id, order.id)
+    """Перевести заказ на следующий этап пайплайна (PAID → ASSIGNED → … → DELIVERED)."""
+    order = (await session.execute(
+        select(Order).where(Order.id == order_id)
+    )).scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+
+    nxt = _next_pipeline_status(order)
+    if nxt is None:
+        raise HTTPException(status_code=400, detail="Заказ нельзя перевести на следующий этап")
+
+    order.status = nxt
+    logger.info("Менеджер id=%s перевёл заказ #%s → %s", current_user.id, order.id, nxt.value)
     await session.commit()
-    return {"ok": True}
+    return {"status": nxt.value}
 
 
 @router.get("/orders/search", response_model=List[OrderBrief])
@@ -541,6 +607,7 @@ def _brief(order: Order) -> OrderBrief:
         boxes_count=order.boxes_count,
         total_amount=float(order.total_amount),
         payment_method=order.payment_method.value if order.payment_method else None,
+        service_pickup=order.service_pickup,
         client_name=order.user.full_name if order.user else None,
         client_email=order.user.email if order.user else None,
         client_phone=order.user.phone if order.user else None,

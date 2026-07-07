@@ -36,7 +36,7 @@ export default function ManagerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link href="/manager/to-ship" className="group">
+          <Link href="/manager/orders" className="group">
             <Card
               className={
                 "rounded-2xl transition-all duration-[var(--duration-base)] cursor-pointer hover:shadow-md hover:-translate-y-0.5 " +
@@ -121,7 +121,7 @@ export default function ManagerDashboard() {
                 <p className="font-semibold text-foreground">{toShip.length} оплаченных заказ(ов) в очереди на отправку</p>
                 <p className="text-sm text-muted-foreground">Возьмите их в работу и отгрузите</p>
               </div>
-              <Link href="/manager/to-ship">
+              <Link href="/manager/orders">
                 <Button className="btn-shine rounded-full">
                   Открыть <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
