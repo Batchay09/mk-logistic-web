@@ -94,7 +94,7 @@ bash deploy-staging.sh
 
 **Общая PostgreSQL с ботом.** Совместимость критична.
 
-- Миграция `0002_add_email_auth.py` добавляет nullable поля: `email`, `password_hash`, `email_verified_at` к таблице `users` и `yookassa_payment_id` к `orders`; `0005_add_pd_consent.py` — `pd_consent_at` (момент согласия на ПД при веб-регистрации)
+- Миграция `0002_add_email_auth.py` добавляет nullable поля: `email`, `password_hash`, `email_verified_at` к таблице `users` и `yookassa_payment_id` к `orders`; `0005_add_pd_consent.py` — `pd_consent_at` (момент согласия на ПД при веб-регистрации); `0006_email_otp.py` — таблица одноразовых кодов (веб-only) + staff помечены подтверждёнными; `0007_add_manager_note.py` — `manager_note` в `orders` (заметка менеджера, клиенту не видна)
 - Бот не трогает новые колонки — работает параллельно без изменений (веб-only nullable колонки в модель бота не добавляем)
 - При изменении `backend/app/db/models.py` — синхронизировать с ботом (`MK tranzit/app/db/models.py`) и накатить Alembic-миграцию
 
@@ -111,18 +111,22 @@ bash deploy-staging.sh
 
 ## Архитектура Auth
 
-- `POST /auth/register` → создаёт User (role=CLIENT) → email с токеном подтверждения
-- `POST /auth/login` → httpOnly cookie `access_token` (JWT, 7 дней)
+- `POST /auth/register` → создаёт User (role=CLIENT), шлёт **6-значный код** на почту; cookie НЕ ставится, телефон обязателен
+- `POST /auth/register/confirm {email, code}` → верификация почты + httpOnly cookie → залогинен
+- `POST /auth/login` → httpOnly cookie `access_token` (JWT, **30 дней**, скользящее продление в `get_current_user` при остатке < половины срока); неподтверждённый email → 403 `email_not_verified` + автоотправка кода (фронт показывает экран ввода кода)
+- Сброс пароля: `POST /auth/reset-password {email}` → код → `POST /auth/reset-confirm {email, code, new_password}` (успех засчитывает верификацию почты); `POST /auth/resend-code {email, purpose}` — переотправка. Анти-enumeration: всегда `{ok: true}`
+- Коды — `services/otp.py` + таблица `email_otp`: HMAC-SHA256, TTL 15 мин, 5 попыток, один активный код на (email, purpose)
 - `GET /auth/me` → возвращает текущего юзера
 - Middleware `frontend/middleware.ts` — проверяет cookie, редиректит на `/login`
 - `Depends(get_current_user)` в FastAPI для защищённых роутов
+- Bootstrap-аккаунты admin/manager создаются сразу подтверждёнными (ящики могут не существовать)
 
 ## Роли пользователей
 
 | Роль | Доступ |
 |------|--------|
 | `client` | `/dashboard`, `/orders/*`, `/cart`, `/profile`, `/companies`, `/support` + плавающий чат-виджет поддержки |
-| `manager` | `/manager/*` — dashboard, **orders** (вкладки по этапам + таймлайн, провал в `/manager/orders/[id]`), payments (проверка оплат), search, reports, **chats** (инбокс поддержки), **broadcast** (рассылка) |
+| `manager` | `/manager/*` — dashboard, **orders** (вкладки по этапам + таймлайн, провал в `/manager/orders/[id]`), **orders/table** (Excel-режим: инлайн-правки, bulk-сохранение с аудитом), payments (проверка оплат), search, reports, **chats** (инбокс поддержки), **broadcast** (рассылка) |
 | `admin` | `/admin/*` (пользователи, направления, тарифы, расписание, аудит) |
 
 ### Как создать admin / manager
@@ -149,7 +153,9 @@ bash deploy-staging.sh
 - **YooKassa webhook** `POST /payments/yookassa/webhook` — `payment.succeeded` (верификация через API, не по телу) → статус PAID → PDF-стикеры на email клиенту + email-уведомление менеджерам.
 - **Пайплайн заказа у менеджера** — `/manager/orders` вкладки по этапам (К отправке/В работе/Забран/В пути/Доставлен, `GET /manager/orders/by-status`, `/orders/counts`), продвижение `POST /manager/orders/{id}/advance` (умный next: «Забрано»/PICKED_UP только при `service_pickup`). Таймлайн этапов в карточке заказа.
 - **Публичные юр-страницы** — `app/(legal)/`: `/offer`, `/privacy`, `/delivery`, `/contacts`. Реквизиты ИП — единый источник `frontend/lib/company.ts` → футер (`SiteFooter`) на всех публичных страницах. Регистрация требует согласия на обработку ПД (152-ФЗ). Всё для прохождения модерации эквайринга.
-- **Паллетизация** — паллетный режим `is_pallet_mode` только от 11 коробок (`BOXES_PER_PALLET`); доставка считается по коробкам со ступенчатым тарифом (`PriceRule.min_qty`: при 11+ включается сниженный «паллетный» тариф); услуга обмотки паллет — опционально +500 ₽ за полную паллету.
+- **Паллетизация** — паллетный режим `is_pallet_mode` только от 11 коробок (`BOXES_PER_PALLET`); доставка считается по коробкам со ступенчатым тарифом (`PriceRule.min_qty`: при 11+ включается сниженный «паллетный» тариф); обмотка паллет **всегда включена** — +500 ₽ за каждую полную паллету, без переключателя (в боте услуга пока опциональна — расхождение осознанное, см. TODO).
+- **Таблица заказов (Excel-режим)** — `/manager/orders/table`: `GET /manager/orders/grid` (фильтры/пагинация), `PATCH /manager/orders/bulk` (частичные ошибки по-строчно, каждая правка в аудит-журнал). Статус меняется только внутри пайплайна исполнения (+отмена, +откат назад); до оплаты — только через «Проверку оплат» (не обойти стикеры/email). Rollback правок заказов из аудита не поддержан.
+- **Стикеры** — нал (`confirmed`): доступны сразу после оформления; безнал: только после оплаты ЮKassa (`paid`+; `awaiting_payment` исключён — платёж создан ≠ оплачен). Гейт: `stickers.py::ALLOWED_STATUSES` + зеркало `frontend/app/orders/[id]`.
 - **sticker.py fallback** — если `tg_id=None` (web-юзер), использует `user.id`
 - **httpOnly cookie** secure=True только в production (`settings.is_production`)
 - **Docker сеть** — `mk-web` (внутренняя) + `mk-shared` (external, общая с ботом для PostgreSQL)
@@ -189,7 +195,7 @@ MANAGER_EMAILS=manager@example.com
 
 ## Статус и следующие шаги
 
-**Готово (staging https://mk.da-net.net):** редизайн Aurora Glass, все страницы клиента (профиль, компании, поддержка, verify/reset), кабинет менеджера (пайплайн заказов по этапам + таймлайн, payments, search, reports, broadcast, chats), чат поддержки с вложениями, публичные юр-страницы + реквизиты + согласие на ПД, оплата ЮKassa (тестовый магазин, сквозной платёж прошёл; безнал только через ЮKassa), SMTP (SpaceWeb), security-хардненинг по аудиту, staging HTTPS. Актуальный список задач → `TODO.md`.
+**Готово (staging https://mk.da-net.net):** редизайн Aurora Glass, все страницы клиента (профиль, компании, поддержка, сброс пароля кодом), OTP-коды при регистрации/сбросе + скользящая сессия 30 дней + обязательный телефон, кабинет менеджера (пайплайн заказов по этапам + таймлайн, **Excel-таблица заказов**, payments, search, reports, broadcast, chats), чат поддержки с вложениями, публичные юр-страницы + реквизиты + согласие на ПД, оплата ЮKassa (тестовый магазин, сквозной платёж прошёл; безнал только через ЮKassa; стикеры безнала — после оплаты), SMTP (SpaceWeb), security-хардненинг по аудиту, staging HTTPS. Актуальный список задач → `TODO.md`.
 
 **Для прод-запуска (осталось):**
 1. Домен + HTTPS на **проде** (staging уже на HTTPS; прод `nginx/nginx.conf` — HTTP)
