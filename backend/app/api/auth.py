@@ -1,8 +1,9 @@
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,9 +29,19 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, description="Пароль не менее 8 символов")
     full_name: str
-    phone: Optional[str] = None
+    # Телефон обязателен: менеджеру нужен контакт для связи по заказу
+    phone: str = Field(min_length=5, max_length=40)
     company_name: Optional[str] = None
     pd_consent: bool = Field(description="Согласие на обработку персональных данных (152-ФЗ)")
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        cleaned = v.strip()
+        digits = re.sub(r"\D", "", cleaned)
+        if not re.fullmatch(r"[\d+()\-\s]{5,40}", cleaned) or len(digits) < 5:
+            raise ValueError("Укажите корректный номер телефона")
+        return cleaned
 
 
 class LoginRequest(BaseModel):

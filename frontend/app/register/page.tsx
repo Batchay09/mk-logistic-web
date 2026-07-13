@@ -20,7 +20,10 @@ const schema = z.object({
   email: z.string().email("Неверный email"),
   password: z.string().min(8, "Минимум 8 символов"),
   confirm_password: z.string(),
-  phone: z.string().optional(),
+  phone: z
+    .string()
+    .min(5, "Укажите номер телефона")
+    .regex(/^[\d+()\-\s]+$/, "Только цифры, +, скобки и дефис"),
   company_name: z.string().optional(),
   accept: z.boolean().refine((v) => v === true, {
     message: "Необходимо принять условия",
@@ -82,7 +85,7 @@ export default function RegisterPage() {
 
             <FormField control={form.control} name="phone" render={({ field }) => (
               <FormItem>
-                <FormLabel>Телефон <span className="text-muted-foreground font-normal">(необязательно)</span></FormLabel>
+                <FormLabel>Телефон</FormLabel>
                 <FormControl><Input type="tel" placeholder="+7 900 000 00 00" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
