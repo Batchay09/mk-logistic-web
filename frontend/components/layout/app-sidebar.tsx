@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   LayoutDashboard, Package, ShoppingCart, History, User, Building2,
   HeadphonesIcon, Truck, Users, MapPin, DollarSign, Calendar, ClipboardList,
-  LogOut, BarChart3, Search, Menu, Megaphone, MessageCircle, PackageCheck
+  LogOut, BarChart3, Search, Menu, Megaphone, MessageCircle, PackageCheck, Table2
 } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -36,6 +36,7 @@ const managerNav: NavItem[] = [
   { href: "/manager/dashboard", label: "Главная", icon: LayoutDashboard },
   { href: "/manager/payments", label: "Проверка оплат", icon: DollarSign },
   { href: "/manager/orders", label: "Заказы", icon: PackageCheck },
+  { href: "/manager/orders/table", label: "Таблица заказов", icon: Table2 },
   { href: "/manager/search", label: "Поиск заказов", icon: Search },
   { href: "/manager/reports", label: "Excel / Отчёты", icon: BarChart3 },
   { href: "/manager/chats", label: "Чаты", icon: MessageCircle },
@@ -114,7 +115,14 @@ function SidebarBody({ role, onNavigate }: { role: SidebarRole; onNavigate?: () 
 
       <nav className="relative flex-1 overflow-y-auto px-3 py-2 space-y-1">
         {nav.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/")
+          // Активен самый специфичный из совпавших пунктов: на /manager/orders/table
+          // подсвечивается «Таблица заказов», а не «Заказы» вместе с ней.
+          const matches = (h: string) => pathname === h || pathname.startsWith(h + "/")
+          const best = nav.reduce<string | null>(
+            (acc, item) => (matches(item.href) && (!acc || item.href.length > acc.length) ? item.href : acc),
+            null,
+          )
+          const active = href === best
           return (
             <Link
               key={href}

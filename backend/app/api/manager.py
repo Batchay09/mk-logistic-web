@@ -13,9 +13,10 @@ from sqlalchemy.orm import selectinload, undefer
 from app.core.dependencies import require_manager
 from app.core.rate_limit import limiter
 from app.db.models import (
-    Order, OrderStatus, SupportConversation, SupportMessage, User, UserRole,
+    Order, OrderStatus, PaymentMethod, SupportConversation, SupportMessage, User, UserRole,
 )
 from app.db.session import get_db
+from app.services.audit import AuditService
 from app.services.attachments import (
     AttachmentError, MAX_UPLOAD_BYTES, content_disposition, process_image, safe_filename,
 )
@@ -196,6 +197,223 @@ async def orders_counts(
     for status_val, cnt in rows:
         counts[status_val.value] = cnt
     return counts
+
+
+# ── Таблица заказов (Excel-режим) ─────────────────────────────────────────────
+
+class OrderGridRow(OrderBrief):
+    destination_id: Optional[int]
+    arrival_date: Optional[date]
+    pallets_count: int
+    manager_note: Optional[str]
+    created_at: datetime
+
+
+class OrdersGridResponse(BaseModel):
+    total: int
+    rows: List[OrderGridRow]
+
+
+class OrderFieldsPatch(BaseModel):
+    """Редактируемые поля таблицы. exclude_unset различает «не прислано» и null."""
+    status: Optional[str] = None
+    ship_date: Optional[date] = None
+    arrival_date: Optional[date] = None
+    company_name: Optional[str] = Field(default=None, max_length=255)
+    payment_method: Optional[str] = None
+    manager_note: Optional[str] = Field(default=None, max_length=2000)
+
+
+class OrderPatchItem(BaseModel):
+    id: int
+    fields: OrderFieldsPatch
+
+
+class BulkPatchRequest(BaseModel):
+    changes: List[OrderPatchItem] = Field(min_length=1, max_length=200)
+
+
+# Статус в таблице меняется только внутри пайплайна исполнения (+ отмена).
+# new/confirmed/awaiting_payment трогать нельзя: подтверждение оплаты идёт через
+# «Проверку оплат» (стикеры + email клиенту) и её нельзя обойти правкой ячейки.
+_GRID_STATUS_FROM = set(_PIPELINE_FULL)
+_GRID_STATUS_TO = _GRID_STATUS_FROM | {OrderStatus.CANCELED}
+
+_GRID_SORT_COLUMNS = {
+    "id": Order.id,
+    "ship_date": Order.ship_date,
+    "created_at": Order.created_at,
+    "total_amount": Order.total_amount,
+}
+
+
+def _grid_row(order: Order) -> OrderGridRow:
+    brief = _brief(order)
+    return OrderGridRow(
+        **brief.model_dump(),
+        destination_id=order.destination_id,
+        arrival_date=order.arrival_date,
+        pallets_count=order.pallets_count,
+        manager_note=order.manager_note,
+        created_at=order.created_at,
+    )
+
+
+@router.get("/orders/grid", response_model=OrdersGridResponse)
+async def orders_grid(
+    status: Optional[str] = None,
+    destination_id: Optional[int] = None,
+    company: Optional[str] = None,
+    ship_from: Optional[date] = None,
+    ship_to: Optional[date] = None,
+    sort: str = "-created_at",
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Заказы для редактируемой таблицы: фильтры, сортировка, пагинация."""
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    filters = [Order.status != OrderStatus.DRAFT]
+    if status:
+        try:
+            statuses = [OrderStatus(s.strip()) for s in status.split(",") if s.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Недопустимый статус")
+        if statuses:
+            filters.append(Order.status.in_(statuses))
+    if destination_id:
+        filters.append(Order.destination_id == destination_id)
+    if company:
+        filters.append(Order.company_name.ilike(f"%{company}%"))
+    if ship_from:
+        filters.append(Order.ship_date >= ship_from)
+    if ship_to:
+        filters.append(Order.ship_date <= ship_to)
+
+    sort_key = sort.lstrip("-")
+    sort_col = _GRID_SORT_COLUMNS.get(sort_key, Order.created_at)
+    order_by = sort_col.desc() if sort.startswith("-") else sort_col.asc()
+
+    total = (await session.execute(
+        select(func.count()).select_from(Order).where(*filters)
+    )).scalar_one()
+
+    result = await session.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.destination))
+        .where(*filters)
+        .order_by(order_by, Order.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return OrdersGridResponse(total=total, rows=[_grid_row(o) for o in result.scalars().all()])
+
+
+def _apply_grid_patch(order: Order, data: dict) -> Optional[str]:
+    """Применить изменения к заказу. Возвращает текст ошибки или None.
+
+    Двухфазно: сначала валидируем ВСЕ поля, потом применяем — чтобы строка
+    с ошибкой не оставила в сессии частично применённые изменения (общий
+    commit в конце подхватил бы их).
+    """
+    parsed: dict = {}
+
+    if "status" in data:
+        new_status_raw = data["status"]
+        try:
+            new_status = OrderStatus(new_status_raw) if new_status_raw else None
+        except ValueError:
+            return f"Недопустимый статус «{new_status_raw}»"
+        if new_status is None:
+            return "Статус нельзя очистить"
+        if new_status != order.status:
+            if order.status not in _GRID_STATUS_FROM:
+                return "Статус до оплаты меняется на странице «Проверка оплат»"
+            if new_status not in _GRID_STATUS_TO:
+                return f"Недопустимый переход в «{new_status.value}»"
+            parsed["status"] = new_status
+
+    if "ship_date" in data:
+        if data["ship_date"] is None:
+            return "Дата отправки не может быть пустой"
+        parsed["ship_date"] = data["ship_date"]
+
+    if "payment_method" in data:
+        pm_raw = data["payment_method"]
+        try:
+            pm = PaymentMethod(pm_raw) if pm_raw else None
+        except ValueError:
+            return f"Недопустимый способ оплаты «{pm_raw}»"
+        if pm is None:
+            return "Способ оплаты нельзя очистить"
+        parsed["payment_method"] = pm
+
+    # Остальные поля без доп. валидации (null допустим: очистка значения)
+    for key in ("arrival_date", "company_name", "manager_note"):
+        if key in data:
+            parsed[key] = data[key]
+
+    for key, value in parsed.items():
+        setattr(order, key, value)
+    return None
+
+
+@router.patch("/orders/bulk")
+async def bulk_update_orders(
+    body: BulkPatchRequest,
+    current_user: User = Depends(require_manager),
+    session: AsyncSession = Depends(get_db),
+):
+    """Массовое сохранение правок из таблицы: одна транзакция, ошибки по-строчно.
+
+    Каждое успешное изменение пишется в аудит-журнал (кто, что, когда).
+    Ответ: {"updated": N, "failed": [{"id", "error"}]} — HTTP 200 даже при
+    частичных ошибках, клиент подсвечивает проблемные строки.
+    """
+    ids = [item.id for item in body.changes]
+    result = await session.execute(
+        select(Order)
+        .options(selectinload(Order.user), selectinload(Order.destination))
+        .where(Order.id.in_(ids))
+    )
+    orders_by_id = {o.id: o for o in result.scalars().all()}
+
+    updated = 0
+    failed: List[dict] = []
+    for item in body.changes:
+        order = orders_by_id.get(item.id)
+        if order is None:
+            failed.append({"id": item.id, "error": "Заказ не найден"})
+            continue
+
+        data = item.fields.model_dump(exclude_unset=True)
+        if not data:
+            failed.append({"id": item.id, "error": "Нет изменений"})
+            continue
+
+        old_data = AuditService._model_to_dict(order)
+        error = _apply_grid_patch(order, data)
+        if error:
+            failed.append({"id": item.id, "error": error})
+            continue
+
+        await AuditService.log_change(
+            session, "orders", order.id, "update",
+            old_data=old_data,
+            new_data=AuditService._model_to_dict(order),
+            user_id=current_user.id,
+        )
+        updated += 1
+
+    await session.commit()
+    logger.info(
+        "Менеджер id=%s сохранил таблицу заказов: updated=%s, failed=%s",
+        current_user.id, updated, len(failed),
+    )
+    return {"updated": updated, "failed": failed}
 
 
 @router.post("/orders/{order_id:int}/advance")

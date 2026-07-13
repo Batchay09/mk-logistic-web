@@ -5,12 +5,15 @@ from typing import Optional, List, Any, Dict
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditLog, Destination, PriceRule, ScheduleRule, Marketplace
+from app.db.models import AuditLog, Destination, Order, PriceRule, ScheduleRule, Marketplace
 
 TABLE_MODEL_MAP = {
     "destinations": Destination,
     "price_rules": PriceRule,
     "schedule_rules": ScheduleRule,
+    # Заказы аудируются (правки менеджера в таблице), но rollback для них
+    # не поддержан: enum-поля (status/payment_method) требуют отдельной коэрции.
+    "orders": Order,
 }
 
 ACTION_NAMES = {
@@ -23,6 +26,7 @@ TABLE_NAMES = {
     "destinations": "Направление",
     "price_rules": "Тариф",
     "schedule_rules": "Расписание",
+    "orders": "Заказ",
 }
 
 
@@ -73,6 +77,11 @@ class AuditService:
         result = await session.execute(select(AuditLog).where(AuditLog.id == audit_log_id))
         log = result.scalar_one_or_none()
         if not log:
+            return False
+
+        # Заказы: журнал есть, откат не поддержан (enum-поля status/payment_method
+        # требуют коэрции из строк; правится руками в таблице заказов).
+        if log.table_name == "orders":
             return False
 
         model_class = TABLE_MODEL_MAP.get(log.table_name)

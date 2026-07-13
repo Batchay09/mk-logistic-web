@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
 import { PIPELINE_TABS, advanceLabel } from "@/lib/manager-pipeline"
-import { PackageCheck, ArrowRight, Loader2 } from "lucide-react"
+import { PackageCheck, ArrowRight, Loader2, Table2 } from "lucide-react"
 
 interface Order {
   id: number
@@ -64,7 +64,14 @@ export default function ManagerOrdersPage() {
             className="pointer-events-none absolute -top-12 left-0 h-56 w-[32rem] max-w-full rounded-full opacity-50 blur-3xl"
             style={{ background: "radial-gradient(circle, oklch(from var(--primary) l c h / 0.10) 0%, transparent 70%)" }}
           />
-          <h1 className="relative text-2xl font-bold">Заказы</h1>
+          <div className="relative flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Заказы</h1>
+            <Link href="/manager/orders/table" className="ml-auto">
+              <Button variant="outline" size="sm" className="rounded-full">
+                <Table2 className="mr-1.5 h-4 w-4" /> Таблица
+              </Button>
+            </Link>
+          </div>
           <p className="relative mt-1 text-sm text-muted-foreground">
             Отслеживайте и двигайте заказы по этапам: от оплаты до доставки
           </p>

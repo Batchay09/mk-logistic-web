@@ -209,6 +209,10 @@ class Order(Base):
     # YooKassa payment id for tracking
     yookassa_payment_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
+    # Внутренняя заметка менеджера (таблица заказов); клиенту не показывается.
+    # Веб-only nullable колонка — в модель бота не добавляем.
+    manager_note: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="orders")
