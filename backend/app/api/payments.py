@@ -7,13 +7,14 @@ from decimal import Decimal, InvalidOperation
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.dependencies import require_client
+from app.core.rate_limit import limiter
 from app.db.models import Order, OrderStatus, PaymentMethod, User
 from app.db.session import get_db
 from app.services.email import notify_client_payment_confirmed, notify_managers_new_order
@@ -40,8 +41,10 @@ _YOOKASSA_NETWORKS = [
 
 
 class YooKassaCreateRequest(BaseModel):
-    order_ids: List[int]
-    return_url: str
+    order_ids: List[int] = Field(min_length=1, max_length=50)
+    # Относительный путь возврата после оплаты; полный URL строим сами от APP_URL,
+    # чтобы платёж нельзя было создать с редиректом на чужой сайт.
+    return_path: str = Field(min_length=1, max_length=200)
 
 
 def _client_ip(request: Request) -> str:
@@ -69,7 +72,9 @@ def _is_yookassa_ip(ip: str) -> bool:
 
 
 @router.post("/yookassa/create")
+@limiter.limit("10/minute")
 async def create_yookassa_payment(
+    request: Request,
     body: YooKassaCreateRequest,
     current_user: User = Depends(require_client),
     session: AsyncSession = Depends(get_db),
@@ -77,10 +82,16 @@ async def create_yookassa_payment(
     if not settings.YOOKASSA_SHOP_ID or not settings.YOOKASSA_SECRET_KEY:
         raise HTTPException(status_code=503, detail="ЮKassa не настроена")
 
-    # Load orders
+    # "//host" и "/\host" браузеры трактуют как протокол-относительный URL —
+    # пропускаем только настоящие внутренние пути.
+    if not body.return_path.startswith("/") or body.return_path[1:2] in ("/", "\\"):
+        raise HTTPException(status_code=400, detail="Некорректный путь возврата")
+    return_url = f"{settings.APP_URL.rstrip('/')}{body.return_path}"
+
+    # Load orders (дубликаты id отбрасываем — иначе сумма платежа задвоится)
     orders = []
     total = Decimal("0")
-    for oid in body.order_ids:
+    for oid in dict.fromkeys(body.order_ids):
         order = (await session.execute(
             select(Order).where(Order.id == oid, Order.user_id == current_user.id)
         )).scalar_one_or_none()
@@ -100,7 +111,7 @@ async def create_yookassa_payment(
 
         payment = YooPayment.create({
             "amount": {"value": f"{total:.2f}", "currency": "RUB"},
-            "confirmation": {"type": "redirect", "return_url": body.return_url},
+            "confirmation": {"type": "redirect", "return_url": return_url},
             "capture": True,
             "description": f"МК Логистик — заказы {order_ids_str}",
             "metadata": {"order_ids": ",".join(str(o.id) for o in orders)},

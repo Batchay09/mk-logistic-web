@@ -66,6 +66,8 @@ class User(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Момент согласия на обработку ПД (152-ФЗ) при веб-регистрации
+    pd_consent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     orders: Mapped[List["Order"]] = relationship("Order", back_populates="user", foreign_keys="Order.user_id")
     addresses: Mapped[List["PickupAddress"]] = relationship("PickupAddress", back_populates="user")

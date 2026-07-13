@@ -86,9 +86,10 @@ export default function CartPage() {
       // Безнал — создаём платёж в ЮKassa напрямую по заказам из корзины.
       // Заказы остаются в корзине (статус NEW), пока платёж не создан: если
       // ЮKassa вернёт ошибку, ничего не теряется и оплату можно повторить.
+      // Только путь — полный URL возврата бэкенд строит сам от APP_URL
       const payment = await api.post<YooKassaPayment>("/payments/yookassa/create", {
         order_ids: orders.map((o) => o.id),
-        return_url: `${window.location.origin}/orders/active`,
+        return_path: "/orders/active",
       })
       window.location.href = payment.confirmation_url
     } catch (e: Error | unknown) {

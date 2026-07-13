@@ -43,10 +43,10 @@ export default function RegisterPage() {
   async function onSubmit(data: FormData) {
     setLoading(true)
     try {
-      const { confirm_password: _c, accept: _a, ...payload } = data
+      const { confirm_password: _c, accept, ...rest } = data
       void _c
-      void _a
-      await api.post<CurrentUser>("/auth/register", payload)
+      // Согласие на ПД уходит на бэкенд и фиксируется с меткой времени (152-ФЗ)
+      await api.post<CurrentUser>("/auth/register", { ...rest, pd_consent: accept })
       toast.success("Аккаунт создан! Проверьте email для подтверждения.")
       router.push("/dashboard")
     } catch (e: unknown) {

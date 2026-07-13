@@ -84,8 +84,8 @@ class OrderOut(BaseModel):
 
 
 class CheckoutRequest(BaseModel):
-    order_ids: List[int]
-    payment_method: str  # cash | cashless
+    order_ids: List[int] = Field(min_length=1, max_length=50)
+    payment_method: str  # только cash — безнал идёт через POST /payments/yookassa/create
 
 
 class CompanyOut(BaseModel):
@@ -238,16 +238,21 @@ async def delete_order(
 
 
 @router.post("/cart/checkout")
+@limiter.limit("10/minute")
 async def checkout(
+    request: Request,
     body: CheckoutRequest,
     current_user: User = Depends(require_client),
     session: AsyncSession = Depends(get_db),
 ):
-    if body.payment_method not in ("cash", "cashless"):
+    # Безнал оформляется только через POST /payments/yookassa/create — статус
+    # AWAITING_PAYMENT заказы получают вместе с созданием платежа. Иначе они
+    # зависали бы у менеджера в очереди «проверка оплат» без реального платежа.
+    if body.payment_method != "cash":
         raise HTTPException(status_code=400, detail="Неверный метод оплаты")
 
     orders = []
-    for oid in body.order_ids:
+    for oid in dict.fromkeys(body.order_ids):
         order = (await session.execute(
             select(Order)
             .options(selectinload(Order.user), selectinload(Order.destination))
@@ -257,12 +262,9 @@ async def checkout(
             raise HTTPException(status_code=404, detail=f"Заказ #{oid} не найден или уже оплачен")
         orders.append(order)
 
-    pm = PaymentMethod(body.payment_method)
-    new_status = OrderStatus.CONFIRMED if pm == PaymentMethod.CASH else OrderStatus.AWAITING_PAYMENT
-
     for order in orders:
-        order.payment_method = pm
-        order.status = new_status
+        order.payment_method = PaymentMethod.CASH
+        order.status = OrderStatus.CONFIRMED
 
     await session.commit()
 
@@ -275,16 +277,6 @@ async def checkout(
     client_name = current_user.full_name or current_user.email or "Клиент"
     await notify_managers_new_order([o.id for o in orders], client_name, total, pickup_info)
 
-    if pm == PaymentMethod.CASHLESS:
-        # Безнал — оплата только через ЮKassa. Заказы переведены в AWAITING_PAYMENT,
-        # сам платёж инициирует фронтенд через POST /payments/yookassa/create.
-        return {
-            "status": "awaiting_payment",
-            "order_ids": [o.id for o in orders],
-            "total": total,
-        }
-
-    # CASH: generate and return sticker link
     return {
         "status": "confirmed",
         "order_ids": [o.id for o in orders],

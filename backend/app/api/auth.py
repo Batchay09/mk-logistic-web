@@ -31,6 +31,7 @@ class RegisterRequest(BaseModel):
     full_name: str
     phone: Optional[str] = None
     company_name: Optional[str] = None
+    pd_consent: bool = Field(description="Согласие на обработку персональных данных (152-ФЗ)")
 
 
 class LoginRequest(BaseModel):
@@ -100,6 +101,9 @@ def _user_out(user: User) -> UserOut:
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(request: Request, body: RegisterRequest, response: Response, session: AsyncSession = Depends(get_db)):
+    if not body.pd_consent:
+        raise HTTPException(status_code=400, detail="Необходимо согласие на обработку персональных данных")
+
     existing = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
@@ -112,6 +116,7 @@ async def register(request: Request, body: RegisterRequest, response: Response, 
         company_name=body.company_name,
         role=UserRole.CLIENT,
         policy_accepted=True,
+        pd_consent_at=datetime.now(timezone.utc),
     )
     session.add(user)
     await session.commit()

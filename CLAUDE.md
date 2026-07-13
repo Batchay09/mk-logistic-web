@@ -91,8 +91,8 @@ bash deploy-staging.sh
 
 **Общая PostgreSQL с ботом.** Совместимость критична.
 
-- Миграция `0002_add_email_auth.py` добавляет nullable поля: `email`, `password_hash`, `email_verified_at` к таблице `users` и `yookassa_payment_id` к `orders`
-- Бот не трогает новые колонки — работает параллельно без изменений
+- Миграция `0002_add_email_auth.py` добавляет nullable поля: `email`, `password_hash`, `email_verified_at` к таблице `users` и `yookassa_payment_id` к `orders`; `0005_add_pd_consent.py` — `pd_consent_at` (момент согласия на ПД при веб-регистрации)
+- Бот не трогает новые колонки — работает параллельно без изменений (веб-only nullable колонки в модель бота не добавляем)
 - При изменении `backend/app/db/models.py` — синхронизировать с ботом (`MK tranzit/app/db/models.py`) и накатить Alembic-миграцию
 
 ## Фирменные цвета
@@ -153,7 +153,7 @@ bash deploy-staging.sh
 - **Next.js standalone** — `output: "standalone"` в `next.config.ts` для минимального Docker-образа
 - **Email best-effort** — `services/email.py::_send` глотает SMTP-ошибки и логирует warning. Бизнес-операции (заказ, оплата) не падают если SMTP не настроен или недоступен. Хосты с `example.com`/`localhost` пропускаются как заглушки.
 - **Чат поддержки** — переписка клиент↔менеджер прямо на сайте (`support_conversations`/`support_messages`, миграции 0003–0004), обновление polling 3–5 сек. У клиента — плавающий виджет `ChatWidget` на всех страницах кабинета (пункт «Поддержка» открывает его), у менеджера — инбокс `/manager/chats` с живым бейджем непрочитанного. Вложения-картинки (JPEG/PNG/WEBP ≤5 МБ) валидируются и пере-кодируются через Pillow (`services/attachments.py`), хранятся в БД (`attachment_data`, `deferred`), отдаются auth-gated. Эндпоинты: `/client/chat*`, `/manager/chats*`.
-- **Безопасность** — rate-limiting (slowapi, ключ по `X-Real-IP` — не подделать), fail-fast `SECRET_KEY` в prod, webhook ЮKassa верифицируется через API (не по телу), экранирование HTML в письмах, валидация/пере-кодирование загружаемых картинок, `X-Real-IP` для IP-проверок. Пройден аудит — CRITICAL нет.
+- **Безопасность** — rate-limiting (slowapi, ключ по `X-Real-IP` — не подделать; в т.ч. на checkout и создании платежа), fail-fast `SECRET_KEY` в prod, webhook ЮKassa верифицируется через API (не по телу), URL возврата после оплаты строится на бэке от `APP_URL` (клиент шлёт только `return_path`), `order_ids` с лимитом и дедупом, checkout принимает только `cash` (безнал — исключительно `/payments/yookassa/create`), согласие на ПД фиксируется в `users.pd_consent_at`, экранирование HTML в письмах, валидация/пере-кодирование загружаемых картинок. Пройден аудит — CRITICAL нет.
 - **Дизайн — Aurora Glass** — иммёрсивный стиль во всём приложении: брендовый оранжевый, стекло, световые ауры, свечение, глубина. Никакого хардкода цветов (`bg-[#D4512B]` ❌) — только токены (`bg-primary`, `text-foreground`, `border-border`), автоадаптация light/dark. Переиспользуемые классы/компоненты в `frontend/app/globals.css` (`.glass`, `.glass-brand`, `.aurora-blob`, `.btn-shine`) и `AuroraHero`. Справка → `frontend/DESIGN_SYSTEM.md`.
 
 ## Переменные окружения (.env)
