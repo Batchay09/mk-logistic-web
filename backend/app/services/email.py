@@ -56,8 +56,8 @@ async def _send(
     text: текстовая версия; если не задана — генерируется из html.
     """
     if not _smtp_configured():
-        logger.info("SMTP не настроен (host=%s) — пропуск '%s' для %s",
-                    settings.SMTP_HOST, subject, to)
+        logger.warning("SMTP не настроен (host=%s) — письмо '%s' для %s НЕ отправлено",
+                       settings.SMTP_HOST, subject, to)
         return
 
     # text + html как равноправные альтернативы (text первым — так требует RFC)
@@ -99,6 +99,7 @@ async def _send(
             username=settings.SMTP_USER,
             password=settings.SMTP_PASSWORD,
         )
+        logger.info("Email '%s' отправлен: %s", subject, to)
     except (aiosmtplib.errors.SMTPException, OSError) as exc:
         # OSError ловит DNS-резолюшен (gaierror) и сетевые сбои.
         logger.warning("SMTP send failed for '%s' to %s: %s", subject, to, exc)
