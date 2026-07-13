@@ -124,7 +124,9 @@ export default function RegisterPage() {
                       className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-border accent-primary"
                     />
                   </FormControl>
-                  <FormLabel className="text-xs font-normal leading-relaxed text-muted-foreground">
+                  {/* block вместо базового flex у Label: иначе текст со ссылками
+                      распадается на flex-колонки вместо обычного абзаца */}
+                  <FormLabel className="block text-xs font-normal leading-relaxed text-muted-foreground">
                     Я принимаю условия{" "}
                     <Link href="/offer" target="_blank" className="text-primary hover:underline">
                       публичной оферты
