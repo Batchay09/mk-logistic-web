@@ -18,7 +18,6 @@ class CalculatorService:
         destination_id: int,
         boxes: int,
         service_pickup: bool,
-        service_palletizing: bool,
     ) -> dict:
         # Паллетный режим — только когда набирается хотя бы одна полная паллета (11+).
         # Считаем полные паллеты: 11 → 1, 20 → 1, 22 → 2, 33 → 3. Остаток коробок
@@ -41,7 +40,9 @@ class CalculatorService:
 
         price_delivery = unit_price * boxes
         price_pickup = BASE_PICKUP_PRICE if service_pickup else 0
-        price_palletizing = pallets_count * PALLETIZING_PRICE if service_palletizing else 0
+        # Паллетизация всегда включена: каждая полная паллета обматывается и оплачивается.
+        # До 11 коробок паллет нет (pallets_count = 0) — доплаты нет.
+        price_palletizing = pallets_count * PALLETIZING_PRICE
         total = price_delivery + price_pickup + price_palletizing
 
         return {

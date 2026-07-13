@@ -45,7 +45,7 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
     ? `${state.pickup_city}, ${state.pickup_street}, ${state.pickup_house}`
     : "Самопривоз"
 
-  const total = state.price_delivery + state.price_pickup + (state.service_palletizing ? state.price_palletizing : 0)
+  const total = state.price_delivery + state.price_pickup + state.price_palletizing
   const hasCompanies = (companies?.length ?? 0) > 0
 
   return (
@@ -105,9 +105,9 @@ export function StepConfirm({ state, update }: { state: WizardState; update: (p:
             <span className="text-foreground">500 ₽</span>
           </div>
         )}
-        {state.service_palletizing && state.price_palletizing > 0 && (
+        {state.price_palletizing > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Паллетизация</span>
+            <span className="text-muted-foreground">Паллетизация ({state.pallets_count} × 500 ₽)</span>
             <span className="text-foreground">{state.price_palletizing.toLocaleString("ru-RU")} ₽</span>
           </div>
         )}

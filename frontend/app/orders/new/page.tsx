@@ -24,7 +24,6 @@ export interface WizardState {
   arrival_date: string
   boxes_count: number
   service_pickup: boolean
-  service_palletizing: boolean
   pickup_city: string
   pickup_street: string
   pickup_house: string
@@ -48,7 +47,6 @@ const EMPTY: WizardState = {
   arrival_date: "",
   boxes_count: 1,
   service_pickup: false,
-  service_palletizing: false,
   pickup_city: "",
   pickup_street: "",
   pickup_house: "",
@@ -98,7 +96,6 @@ export default function NewOrderPage() {
         arrival_date: state.arrival_date,
         boxes_count: state.boxes_count,
         service_pickup: state.service_pickup,
-        service_palletizing: state.service_palletizing,
         company_name: state.company_name || undefined,
         pickup_address: state.service_pickup
           ? { city: state.pickup_city, street: state.pickup_street, house: state.pickup_house, comment: state.pickup_comment || undefined }

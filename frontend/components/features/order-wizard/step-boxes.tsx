@@ -6,9 +6,7 @@ import type { WizardState } from "@/app/orders/new/page"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Minus, Plus, AlertTriangle } from "lucide-react"
+import { Minus, Plus, Package } from "lucide-react"
 
 interface PriceResult {
   price_delivery: number
@@ -24,12 +22,11 @@ export function StepBoxes({ state, update }: { state: WizardState; update: (p: P
   const [inputVal, setInputVal] = useState(String(state.boxes_count))
 
   const { data: pricing, isLoading } = useQuery<PriceResult>({
-    queryKey: ["price", state.destination_id, state.boxes_count, state.service_palletizing],
+    queryKey: ["price", state.destination_id, state.boxes_count],
     queryFn: () => api.post("/calc/price", {
       destination_id: state.destination_id,
       boxes: state.boxes_count,
       service_pickup: false,
-      service_palletizing: state.service_palletizing,
     }),
     enabled: !!state.destination_id && state.boxes_count >= 1,
   })
@@ -44,8 +41,6 @@ export function StepBoxes({ state, update }: { state: WizardState; update: (p: P
         unit_price: pricing.unit_price,
         pallets_count: pricing.pallets_count,
         is_pallet_mode: pricing.is_pallet_mode,
-        // Коробок стало меньше 11 — паллет нет, сбрасываем услугу паллетизации
-        ...(pricing.is_pallet_mode ? {} : { service_palletizing: false }),
       })
     }
   }, [pricing])
@@ -95,28 +90,17 @@ export function StepBoxes({ state, update }: { state: WizardState; update: (p: P
       </div>
       <p className="text-center text-sm text-muted-foreground">коробок</p>
 
-      {/* Pallet mode warning */}
+      {/* Pallet mode info: паллетизация включена всегда, от 11 коробок */}
       {state.is_pallet_mode && (
-        <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm">
-          <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 bg-muted border border-border rounded-lg p-3 text-sm">
+          <Package className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <div>
             <span className="font-medium text-foreground">Паллетный режим</span>
-            <span className="text-muted-foreground"> — {state.pallets_count} паллет(а) по 11 коробок</span>
+            <span className="text-muted-foreground">
+              {" "}— {state.pallets_count} паллет(а) по 11 коробок. Паллетизация включена
+              (+{(state.pallets_count * 500).toLocaleString("ru-RU")} ₽)
+            </span>
           </div>
-        </div>
-      )}
-
-      {/* Palletizing service */}
-      {state.is_pallet_mode && (
-        <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
-          <Label className="cursor-pointer text-sm text-foreground">
-            Паллетизация (+{(state.pallets_count * 500).toLocaleString("ru-RU")} ₽)
-          </Label>
-          <Switch
-            checked={state.service_palletizing}
-            onCheckedChange={(v) => update({ service_palletizing: v })}
-            className="data-[state=checked]:bg-primary"
-          />
         </div>
       )}
 
@@ -131,7 +115,7 @@ export function StepBoxes({ state, update }: { state: WizardState; update: (p: P
           </div>
           {pricing.price_palletizing > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Паллетизация</span>
+              <span className="text-muted-foreground">Паллетизация ({pricing.pallets_count} × 500 ₽)</span>
               <span className="font-medium text-foreground">{pricing.price_palletizing.toLocaleString("ru-RU")} ₽</span>
             </div>
           )}

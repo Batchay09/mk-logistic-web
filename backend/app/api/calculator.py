@@ -15,7 +15,6 @@ class PriceRequest(BaseModel):
     destination_id: int
     boxes: int = Field(gt=0, le=100000)
     service_pickup: bool = False
-    service_palletizing: bool = False
 
 
 class PriceResponse(BaseModel):
@@ -43,7 +42,7 @@ class DateOption(BaseModel):
 @router.post("/price", response_model=PriceResponse)
 async def calculate_price(body: PriceRequest, session: AsyncSession = Depends(get_db)):
     result = await CalculatorService.calculate_price(
-        session, body.destination_id, body.boxes, body.service_pickup, body.service_palletizing
+        session, body.destination_id, body.boxes, body.service_pickup
     )
     return result
 

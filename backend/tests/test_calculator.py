@@ -11,13 +11,12 @@ from app.services.calculator import (
 )
 
 
-async def _calc(session, boxes, *, palletizing=False, pickup=False):
+async def _calc(session, boxes, *, pickup=False):
     return await CalculatorService.calculate_price(
         session,
         destination_id=1,
         boxes=boxes,
         service_pickup=pickup,
-        service_palletizing=palletizing,
     )
 
 
@@ -40,25 +39,29 @@ async def test_pallets_count_uses_floor(session, boxes, expected_pallets):
     assert result["pallets_count"] == expected_pallets
 
 
-async def test_pallet_mode_always_on(session):
-    """Паллетный режим показываем всегда, даже при малом количестве коробок."""
-    for boxes in (1, 5, 11, 50):
+async def test_pallet_mode_from_full_pallet(session):
+    """Паллетный режим включается только от полной паллеты (11+ коробок)."""
+    for boxes in (1, 5, 10):
+        result = await _calc(session, boxes)
+        assert result["is_pallet_mode"] is False
+    for boxes in (11, 50):
         result = await _calc(session, boxes)
         assert result["is_pallet_mode"] is True
 
 
-async def test_palletizing_price_scales_with_full_pallets(session):
-    """Услуга паллетизации = число полных паллет × цена за паллет."""
-    result = await _calc(session, 22, palletizing=True)
+async def test_palletizing_always_charged_per_full_pallet(session):
+    """Паллетизация всегда включена: число полных паллет × цена за паллету."""
+    result = await _calc(session, 22)
     assert result["price_palletizing"] == 2 * PALLETIZING_PRICE
 
     # 20 коробок → 1 полный паллет → одна цена паллетизации (а не две)
-    result = await _calc(session, 20, palletizing=True)
+    result = await _calc(session, 20)
     assert result["price_palletizing"] == 1 * PALLETIZING_PRICE
 
 
-async def test_palletizing_zero_when_not_requested(session):
-    result = await _calc(session, 33, palletizing=False)
+async def test_palletizing_zero_below_full_pallet(session):
+    """До 11 коробок паллет нет — доплаты за паллетизацию нет."""
+    result = await _calc(session, 10)
     assert result["price_palletizing"] == 0
 
 

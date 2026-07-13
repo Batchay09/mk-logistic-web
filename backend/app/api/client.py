@@ -54,7 +54,6 @@ class OrderCreateRequest(BaseModel):
     arrival_date: date
     boxes_count: int = Field(gt=0, le=100000)
     service_pickup: bool = False
-    service_palletizing: bool = False
     pickup_address: Optional[AddressIn] = None
     company_name: Optional[str] = Field(default=None, max_length=255)
 
@@ -149,7 +148,7 @@ async def create_order(
 
     # Calculate price
     pricing = await CalculatorService.calculate_price(
-        session, body.destination_id, body.boxes_count, body.service_pickup, body.service_palletizing
+        session, body.destination_id, body.boxes_count, body.service_pickup
     )
     if pricing["total_amount"] <= 0:
         raise HTTPException(status_code=400, detail="Некорректная сумма заказа")
@@ -180,7 +179,9 @@ async def create_order(
         pallets_count=pricing["pallets_count"],
         is_pallet_mode=pricing["is_pallet_mode"],
         service_pickup=body.service_pickup,
-        service_palletizing=body.service_palletizing,
+        # Паллетизация всегда включена при наличии полных паллет (колонка остаётся
+        # для совместимости с ботом, где услуга пока опциональна).
+        service_palletizing=pricing["is_pallet_mode"],
         pickup_address_id=pickup_address_id,
         price_delivery=pricing["price_delivery"],
         price_pickup=pricing["price_pickup"],
