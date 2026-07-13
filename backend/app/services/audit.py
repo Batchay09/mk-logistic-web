@@ -135,6 +135,7 @@ class AuditService:
 
     @staticmethod
     def _model_to_dict(model: Any) -> Dict[str, Any]:
+        from datetime import date, datetime
         from decimal import Decimal
         data = {}
         for column in model.__table__.columns:
@@ -143,6 +144,9 @@ class AuditService:
                 value = value.value
             elif isinstance(value, Decimal):
                 value = float(value)
+            elif isinstance(value, (datetime, date)):
+                # JSON-колонка audit_logs не принимает date/datetime (заказы)
+                value = value.isoformat()
             data[column.name] = value
         return data
 

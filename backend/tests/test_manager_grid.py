@@ -111,3 +111,14 @@ def test_payment_method_invalid_rejected(value):
     order = _order()
     assert _apply_grid_patch(order, _patch(payment_method=value)) is not None
     assert order.payment_method == PaymentMethod.CASHLESS
+
+
+def test_audit_dict_is_json_serializable():
+    """Регрессия: date/datetime заказа должны сериализоваться в JSON аудита."""
+    import json
+
+    from app.services.audit import AuditService
+
+    payload = AuditService._model_to_dict(_order())
+    json.dumps(payload)  # не должно бросить TypeError
+    assert payload["ship_date"] == "2026-07-12"
