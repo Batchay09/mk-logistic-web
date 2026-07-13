@@ -82,9 +82,12 @@ alembic upgrade head
 # Staging деплой на VPS (mk.da-net.net)
 bash deploy-staging.sh
 # Вход по SSH-ключу id_ed25519 через alias `mk-vps` (~/.ssh/config → IdentityFile).
-# Ключ уже залит в authorized_keys на сервере — пароль не нужен.
+# Ключ уже залит в authorized_keys на сервере. Пароль на сервере ОТКЛЮЧЁН
+# (PasswordAuthentication no) — SSHPASS-fallback больше не работает.
+# Ключ с passphrase: если после ребута «Permission denied (publickey)» —
+# это пустой ssh-agent, лечится: ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+# (в ~/.ssh/config для mk-vps стоят AddKeysToAgent/UseKeychain — нужен один запуск).
 # Проверка доступа:  ssh mk-vps "hostname"
-# Fallback (если ключ слетит): SSHPASS='...' bash deploy-staging.sh
 ```
 
 ## База данных
