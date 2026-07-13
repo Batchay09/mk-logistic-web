@@ -65,3 +65,4 @@ backend/app/fonts/
 *.sqlite
 *.sqlite3
 backend/dev.db
+.gstack/
