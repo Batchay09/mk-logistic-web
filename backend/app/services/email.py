@@ -105,52 +105,44 @@ async def _send(
         logger.warning("SMTP send failed for '%s' to %s: %s", subject, to, exc)
 
 
-async def send_verification_email(to: str, token: str) -> None:
-    url = f"{settings.APP_URL}/verify-email?token={token}"
+def _code_block(code: str) -> str:
+    return (
+        f'<p style="font-size:34px;font-weight:bold;letter-spacing:10px;'
+        f'margin:20px 0;color:#1a1a1a;">{code}</p>'
+    )
+
+
+async def send_registration_code(to: str, code: str) -> None:
     html = f"""
-    <h2>Подтверждение email — МК Логистик</h2>
-    <p>Здравствуйте! Для завершения регистрации в личном кабинете МК Логистик
-       перейдите по кнопке ниже:</p>
-    <a href="{url}" style="background:#D4512B;color:#fff;padding:12px 24px;
-       border-radius:6px;text-decoration:none;display:inline-block;font-size:16px;">
-       Подтвердить email
-    </a>
-    <p style="font-size:13px;">Если кнопка не работает, скопируйте ссылку в браузер:<br>
-       <a href="{url}">{url}</a></p>
-    <p style="color:#888;font-size:12px;">Ссылка действительна 24 часа.
+    <h2>Код подтверждения — МК Логистик</h2>
+    <p>Здравствуйте! Ваш код для завершения регистрации в личном кабинете МК Логистик:</p>
+    {_code_block(code)}
+    <p style="color:#888;font-size:12px;">Код действителен 15 минут.
        Если вы не регистрировались на сайте МК Логистик, просто проигнорируйте это письмо.</p>
     """
     text = (
-        "Подтверждение email — МК Логистик\n\n"
-        "Для завершения регистрации перейдите по ссылке:\n"
-        f"{url}\n\n"
-        "Ссылка действительна 24 часа. Если вы не регистрировались — проигнорируйте письмо."
+        "Код подтверждения — МК Логистик\n\n"
+        f"Ваш код для завершения регистрации: {code}\n\n"
+        "Код действителен 15 минут. Если вы не регистрировались — проигнорируйте письмо."
     )
-    await _send([to], "Подтверждение email — МК Логистик", html, text=text)
+    await _send([to], f"Код подтверждения {code} — МК Логистик", html, text=text)
 
 
-async def send_reset_password_email(to: str, token: str) -> None:
-    url = f"{settings.APP_URL}/reset-password?token={token}"
+async def send_reset_code(to: str, code: str) -> None:
     html = f"""
     <h2>Сброс пароля — МК Логистик</h2>
     <p>Вы запросили сброс пароля для аккаунта в личном кабинете МК Логистик.
-       Чтобы задать новый пароль, перейдите по кнопке ниже:</p>
-    <a href="{url}" style="background:#D4512B;color:#fff;padding:12px 24px;
-       border-radius:6px;text-decoration:none;display:inline-block;font-size:16px;">
-       Сбросить пароль
-    </a>
-    <p style="font-size:13px;">Если кнопка не работает, скопируйте ссылку в браузер:<br>
-       <a href="{url}">{url}</a></p>
-    <p style="color:#888;font-size:12px;">Ссылка действительна 2 часа.
+       Ваш код подтверждения:</p>
+    {_code_block(code)}
+    <p style="color:#888;font-size:12px;">Код действителен 15 минут.
        Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.</p>
     """
     text = (
         "Сброс пароля — МК Логистик\n\n"
-        "Вы запросили сброс пароля. Чтобы задать новый, перейдите по ссылке:\n"
-        f"{url}\n\n"
-        "Ссылка действительна 2 часа. Если вы не запрашивали сброс — проигнорируйте письмо."
+        f"Ваш код подтверждения: {code}\n\n"
+        "Код действителен 15 минут. Если вы не запрашивали сброс — проигнорируйте письмо."
     )
-    await _send([to], "Сброс пароля — МК Логистик", html, text=text)
+    await _send([to], f"Код сброса пароля {code} — МК Логистик", html, text=text)
 
 
 async def notify_managers_new_order(order_ids: List[int], client_name: str, total: float,

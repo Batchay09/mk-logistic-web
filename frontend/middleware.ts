@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from "next/server"
 const PUBLIC_PREFIXES = [
   "/login",
   "/register",
-  "/verify-email",
   "/reset-password",
   // Публичные юридические страницы — должны открываться без входа,
   // иначе модератор эквайринга (и клиент) их не увидит.

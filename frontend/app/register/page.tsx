@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { AuthShell, AuthHeader } from "@/components/layout/auth-shell"
+import { VerifyEmailForm } from "@/components/features/verify-email-form"
 import { api } from "@/lib/api"
-import type { CurrentUser } from "@/lib/auth"
 
 const schema = z.object({
   full_name: z.string().min(2, "Введите имя"),
@@ -37,6 +37,8 @@ type FormData = z.infer<typeof schema>
 export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  // После отправки формы регистрация завершается вводом кода из письма
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -49,15 +51,32 @@ export default function RegisterPage() {
       const { confirm_password: _c, accept, ...rest } = data
       void _c
       // Согласие на ПД уходит на бэкенд и фиксируется с меткой времени (152-ФЗ)
-      await api.post<CurrentUser>("/auth/register", { ...rest, pd_consent: accept })
-      toast.success("Аккаунт создан! Проверьте email для подтверждения.")
-      router.push("/dashboard")
+      await api.post("/auth/register", { ...rest, pd_consent: accept })
+      toast.success("Код подтверждения отправлен на почту")
+      setPendingEmail(data.email)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Ошибка регистрации"
       toast.error(msg)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (pendingEmail) {
+    return (
+      <AuthShell>
+        <div className="w-full max-w-sm">
+          <AuthHeader title="Подтвердите email" subtitle="Остался последний шаг" />
+          <VerifyEmailForm
+            email={pendingEmail}
+            onSuccess={() => {
+              toast.success("Аккаунт подтверждён — добро пожаловать!")
+              router.push("/dashboard")
+            }}
+          />
+        </div>
+      </AuthShell>
+    )
   }
 
   return (

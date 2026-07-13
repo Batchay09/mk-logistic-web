@@ -1,6 +1,6 @@
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -10,15 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.core.rate_limit import limiter
 from app.core.security import (
-    create_email_token,
-    decode_token,
     hash_password,
     set_auth_cookie,
     verify_password,
 )
 from app.db.models import User, UserRole
 from app.db.session import get_db
-from app.services.email import send_reset_password_email, send_verification_email
+from app.services.email import send_registration_code, send_reset_code
+from app.services.otp import issue_code, verify_code
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -54,12 +53,19 @@ class ResetPasswordRequest(BaseModel):
 
 
 class ResetPasswordConfirm(BaseModel):
-    token: str
-    new_password: str
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8)
 
 
-class VerifyEmailRequest(BaseModel):
-    token: str
+class RegisterConfirmRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+
+
+class ResendCodeRequest(BaseModel):
+    email: EmailStr
+    purpose: Literal["register", "reset"]
 
 
 class ChangePasswordRequest(BaseModel):
@@ -96,9 +102,19 @@ def _user_out(user: User) -> UserOut:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def _issue_and_send_register_code(session: AsyncSession, user: User) -> None:
+    """Выпустить регистрационный код и отправить письмом (best-effort)."""
+    code = await issue_code(session, user.email, "register", user.id)
+    await session.commit()
+    try:
+        await send_registration_code(user.email, code)
+    except Exception:
+        pass  # письмо best-effort: код можно переотправить
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def register(request: Request, body: RegisterRequest, response: Response, session: AsyncSession = Depends(get_db)):
+async def register(request: Request, body: RegisterRequest, session: AsyncSession = Depends(get_db)):
     if not body.pd_consent:
         raise HTTPException(status_code=400, detail="Необходимо согласие на обработку персональных данных")
 
@@ -120,15 +136,50 @@ async def register(request: Request, body: RegisterRequest, response: Response, 
     await session.commit()
     await session.refresh(user)
 
-    # Send verification email (non-blocking)
-    try:
-        token = create_email_token({"sub": str(user.id), "purpose": "verify"})
-        await send_verification_email(body.email, token)
-    except Exception:
-        pass  # don't fail registration if email fails
+    # Регистрация завершается только после подтверждения кода из письма —
+    # cookie здесь намеренно не ставим.
+    await _issue_and_send_register_code(session, user)
+    return {"ok": True, "email": user.email}
+
+
+@router.post("/register/confirm", response_model=UserOut)
+@limiter.limit("10/minute")
+async def register_confirm(
+    request: Request,
+    body: RegisterConfirmRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_db),
+):
+    user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
+    if not user or not await verify_code(session, body.email, "register", body.code):
+        raise HTTPException(status_code=400, detail="Неверный или устаревший код")
+
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
+    await session.commit()
 
     set_auth_cookie(response, user.id)
     return _user_out(user)
+
+
+@router.post("/resend-code")
+@limiter.limit("3/minute")
+async def resend_code(request: Request, body: ResendCodeRequest, session: AsyncSession = Depends(get_db)):
+    user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
+    if user:
+        already_verified = body.purpose == "register" and user.email_verified_at is not None
+        if not already_verified:
+            code = await issue_code(session, user.email, body.purpose, user.id)
+            await session.commit()
+            try:
+                if body.purpose == "register":
+                    await send_registration_code(user.email, code)
+                else:
+                    await send_reset_code(user.email, code)
+            except Exception:
+                pass
+    # Всегда 200 — не раскрываем, зарегистрирован ли email
+    return {"ok": True}
 
 
 @router.post("/login", response_model=UserOut)
@@ -137,6 +188,12 @@ async def login(request: Request, body: LoginRequest, response: Response, sessio
     user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
+
+    if user.email_verified_at is None:
+        # Пароль верный, но email не подтверждён (в т.ч. старые аккаунты со ссылочной
+        # верификацией). Шлём код и просим фронт показать экран подтверждения.
+        await _issue_and_send_register_code(session, user)
+        raise HTTPException(status_code=403, detail="email_not_verified")
 
     set_auth_cookie(response, user.id)
     return _user_out(user)
@@ -148,30 +205,15 @@ async def logout(response: Response):
     return {"ok": True}
 
 
-@router.post("/verify-email")
-async def verify_email(body: VerifyEmailRequest, session: AsyncSession = Depends(get_db)):
-    payload = decode_token(body.token)
-    if not payload or payload.get("purpose") != "verify":
-        raise HTTPException(status_code=400, detail="Неверная или устаревшая ссылка")
-
-    user_id = payload.get("sub")
-    user = (await session.execute(select(User).where(User.id == int(user_id)))).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    user.email_verified_at = datetime.now(timezone.utc)
-    await session.commit()
-    return {"ok": True}
-
-
 @router.post("/reset-password")
 @limiter.limit("3/minute")
 async def reset_password(request: Request, body: ResetPasswordRequest, session: AsyncSession = Depends(get_db)):
     user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
     if user:
-        token = create_email_token({"sub": str(user.id), "purpose": "reset"}, expires_hours=2)
+        code = await issue_code(session, user.email, "reset", user.id)
+        await session.commit()
         try:
-            await send_reset_password_email(body.email, token)
+            await send_reset_code(user.email, code)
         except Exception:
             pass
     # Always return 200 to avoid email enumeration
@@ -179,21 +221,16 @@ async def reset_password(request: Request, body: ResetPasswordRequest, session: 
 
 
 @router.post("/reset-confirm")
-async def reset_confirm(body: ResetPasswordConfirm, session: AsyncSession = Depends(get_db)):
-    payload = decode_token(body.token)
-    if not payload or payload.get("purpose") != "reset":
-        raise HTTPException(status_code=400, detail="Неверная или устаревшая ссылка")
-
-    user = (await session.execute(
-        select(User).where(User.id == int(payload["sub"]))
-    )).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    if len(body.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Пароль должен быть не менее 8 символов")
+@limiter.limit("10/minute")
+async def reset_confirm(request: Request, body: ResetPasswordConfirm, session: AsyncSession = Depends(get_db)):
+    user = (await session.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
+    if not user or not await verify_code(session, body.email, "reset", body.code):
+        raise HTTPException(status_code=400, detail="Неверный или устаревший код")
 
     user.password_hash = hash_password(body.new_password)
+    # Код пришёл на почту — владение ящиком доказано, засчитываем верификацию
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
     await session.commit()
     return {"ok": True}
 

@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { AuthShell, AuthHeader } from "@/components/layout/auth-shell"
-import { api } from "@/lib/api"
+import { VerifyEmailForm } from "@/components/features/verify-email-form"
+import { api, ApiError } from "@/lib/api"
 import type { CurrentUser } from "@/lib/auth"
 import { getRoleRedirect } from "@/lib/auth"
 
@@ -37,6 +38,8 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const next = safeNext(searchParams.get("next"))
   const [loading, setLoading] = useState(false)
+  // Email не подтверждён — бэкенд уже выслал код, показываем экран подтверждения
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
 
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
 
@@ -47,11 +50,31 @@ function LoginForm() {
       toast.success("Добро пожаловать!")
       router.push(next || getRoleRedirect(user.role))
     } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 403 && e.message === "email_not_verified") {
+        toast.info("Подтвердите email — мы отправили код на почту")
+        setPendingEmail(data.email)
+        return
+      }
       const msg = e instanceof Error ? e.message : "Ошибка входа"
       toast.error(msg)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (pendingEmail) {
+    return (
+      <div className="w-full max-w-sm">
+        <AuthHeader title="Подтвердите email" subtitle="Для входа нужно подтвердить почту" />
+        <VerifyEmailForm
+          email={pendingEmail}
+          onSuccess={(user) => {
+            toast.success("Почта подтверждена — добро пожаловать!")
+            router.push(next || getRoleRedirect(user.role))
+          }}
+        />
+      </div>
+    )
   }
 
   return (

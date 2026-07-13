@@ -78,6 +78,28 @@ class User(Base):
         return f"{self.full_name or self.email or 'User'} ({self.id})"
 
 
+class EmailOtp(Base):
+    """Одноразовые 6-значные коды подтверждения email (регистрация, сброс пароля).
+
+    Веб-only таблица — бот её не читает и не пишет. Код хранится как HMAC-SHA256
+    (утечка БД не раскрывает коды). Один активный код на (email, purpose):
+    повторная отправка удаляет предыдущий.
+    """
+    __tablename__ = "email_otp"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    purpose: Mapped[str] = mapped_column(String(16))  # 'register' | 'reset'
+    code_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CompanyProfile(Base):
     __tablename__ = "company_profiles"
 

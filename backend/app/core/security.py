@@ -29,14 +29,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_email_token(data: dict, expires_hours: int = 24) -> str:
-    """Short-lived token for email verification / password reset."""
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
-    to_encode.update({"exp": expire, "type": "email"})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-
-
 def decode_token(token: str) -> Optional[dict]:
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])

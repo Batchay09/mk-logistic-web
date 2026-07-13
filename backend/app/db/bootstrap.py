@@ -12,6 +12,7 @@
 """
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,10 +52,17 @@ async def ensure_user(
                 password_hash=hash_password(password),
                 full_name=full_name,
                 role=role,
+                # Staff-аккаунты доверенные: вход требует подтверждённый email,
+                # а bootstrap-ящики могут не существовать.
+                email_verified_at=datetime.now(timezone.utc),
             )
         )
         logger.info("Создан %s с ролью %s", email, role.value)
         return
+
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
+        logger.info("Помечен подтверждённым: %s (staff)", email)
 
     if user.role != role:
         # Не понижаем admin до manager автоматически — если admin уже создан, не трогаем.

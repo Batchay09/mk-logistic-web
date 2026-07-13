@@ -1,17 +1,18 @@
 "use client"
 
-import { Suspense, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2, MailCheck } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { AuthShell, AuthHeader } from "@/components/layout/auth-shell"
+import { OtpCodeInput, ResendCodeButton } from "@/components/features/otp-code"
 import { api } from "@/lib/api"
 
 const requestSchema = z.object({
@@ -30,44 +31,27 @@ const confirmSchema = z
   })
 type ConfirmData = z.infer<typeof confirmSchema>
 
-// Шаг 1: запрос ссылки на email
-function RequestForm() {
+// Шаг 1: запрос кода на email
+function RequestForm({ onSent }: { onSent: (email: string) => void }) {
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const form = useForm<RequestData>({ resolver: zodResolver(requestSchema), defaultValues: { email: "" } })
 
   async function onSubmit(data: RequestData) {
     setLoading(true)
     try {
-      await api.post("/auth/reset-password", data)
-      setSent(true)
+      await api.post("/auth/reset-password", { email: data.email })
+      toast.success("Если аккаунт существует, код отправлен на почту")
+      onSent(data.email)
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Ошибка"
-      toast.error(msg)
+      toast.error(e instanceof Error ? e.message : "Ошибка")
     } finally {
       setLoading(false)
     }
   }
 
-  if (sent) {
-    return (
-      <div className="w-full max-w-sm text-center">
-        <MailCheck className="h-12 w-12 mx-auto text-primary" />
-        <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">Проверьте почту</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Если аккаунт с таким email существует, мы отправили на него ссылку для сброса пароля.
-          Ссылка действует 2 часа.
-        </p>
-        <Link href="/login" className="mt-6 inline-block text-sm text-primary hover:underline font-medium">
-          Вернуться ко входу
-        </Link>
-      </div>
-    )
-  }
-
   return (
     <div className="w-full max-w-sm">
-      <AuthHeader title="Восстановление пароля" subtitle="Укажите email — пришлём ссылку для сброса" />
+      <AuthHeader title="Восстановление пароля" subtitle="Укажите email — пришлём 6-значный код" />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
@@ -83,7 +67,7 @@ function RequestForm() {
 
           <Button type="submit" disabled={loading} size="lg" className="w-full">
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Отправить ссылку
+            Отправить код
           </Button>
         </form>
       </Form>
@@ -98,24 +82,28 @@ function RequestForm() {
   )
 }
 
-// Шаг 2: ввод нового пароля по токену из письма
-function ConfirmForm({ token }: { token: string }) {
+// Шаг 2: код из письма + новый пароль
+function ConfirmForm({ email }: { email: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [code, setCode] = useState("")
   const form = useForm<ConfirmData>({
     resolver: zodResolver(confirmSchema),
     defaultValues: { new_password: "", confirm: "" },
   })
 
   async function onSubmit(data: ConfirmData) {
+    if (code.length !== 6) {
+      toast.error("Введите 6-значный код из письма")
+      return
+    }
     setLoading(true)
     try {
-      await api.post("/auth/reset-confirm", { token, new_password: data.new_password })
+      await api.post("/auth/reset-confirm", { email, code, new_password: data.new_password })
       toast.success("Пароль обновлён — войдите с новым паролем")
       router.push("/login")
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Ссылка устарела или недействительна"
-      toast.error(msg)
+      toast.error(e instanceof Error ? e.message : "Неверный или устаревший код")
     } finally {
       setLoading(false)
     }
@@ -123,10 +111,15 @@ function ConfirmForm({ token }: { token: string }) {
 
   return (
     <div className="w-full max-w-sm">
-      <AuthHeader title="Новый пароль" subtitle="Придумайте новый пароль для входа" />
+      <AuthHeader title="Новый пароль" subtitle={`Код отправлен на ${email}`} />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <FormLabel>Код из письма</FormLabel>
+            <OtpCodeInput value={code} onChange={setCode} autoFocus />
+          </div>
+
           <FormField control={form.control} name="new_password" render={({ field }) => (
             <FormItem>
               <FormLabel>Новый пароль</FormLabel>
@@ -147,27 +140,22 @@ function ConfirmForm({ token }: { token: string }) {
             </FormItem>
           )} />
 
-          <Button type="submit" disabled={loading} size="lg" className="w-full">
+          <Button type="submit" disabled={loading || code.length !== 6} size="lg" className="w-full">
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Сохранить пароль
           </Button>
+          <ResendCodeButton email={email} purpose="reset" />
         </form>
       </Form>
     </div>
   )
 }
 
-function ResetContent() {
-  const token = useSearchParams().get("token")
-  return token ? <ConfirmForm token={token} /> : <RequestForm />
-}
-
 export default function ResetPasswordPage() {
+  const [email, setEmail] = useState<string | null>(null)
   return (
     <AuthShell>
-      <Suspense fallback={<div className="text-muted-foreground">Загрузка...</div>}>
-        <ResetContent />
-      </Suspense>
+      {email ? <ConfirmForm email={email} /> : <RequestForm onSent={setEmail} />}
     </AuthShell>
   )
 }
