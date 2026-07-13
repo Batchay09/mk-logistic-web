@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from fastapi import Response
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -41,3 +42,16 @@ def decode_token(token: str) -> Optional[dict]:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         return None
+
+
+def set_auth_cookie(response: Response, user_id: int) -> None:
+    """Единая точка выставления auth-cookie: логин, регистрация, скользящее продление."""
+    token = create_access_token({"sub": str(user_id)})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )

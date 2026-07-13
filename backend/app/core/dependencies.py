@@ -1,15 +1,18 @@
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import decode_token
+from app.core.config import settings
+from app.core.security import decode_token, set_auth_cookie
 from app.db.models import User, UserRole
 from app.db.session import get_db
 
 
 async def get_current_user(
+    response: Response,
     access_token: Optional[str] = Cookie(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> User:
@@ -32,17 +35,27 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
+
+    # Скользящее продление сессии: если токену осталось меньше половины срока —
+    # выпускаем новый. Активный пользователь не разлогинивается никогда,
+    # неактивный — через ACCESS_TOKEN_EXPIRE_MINUTES (30 дней).
+    exp = payload.get("exp")
+    ttl_seconds = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    if exp and exp - datetime.now(timezone.utc).timestamp() < ttl_seconds / 2:
+        set_auth_cookie(response, user.id)
+
     return user
 
 
 async def get_current_user_optional(
+    response: Response,
     access_token: Optional[str] = Cookie(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     if not access_token:
         return None
     try:
-        return await get_current_user(access_token=access_token, session=session)
+        return await get_current_user(response, access_token=access_token, session=session)
     except HTTPException:
         return None
 

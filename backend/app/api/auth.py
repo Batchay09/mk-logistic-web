@@ -6,14 +6,13 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.core.rate_limit import limiter
 from app.core.security import (
-    create_access_token,
     create_email_token,
     decode_token,
     hash_password,
+    set_auth_cookie,
     verify_password,
 )
 from app.db.models import User, UserRole
@@ -72,18 +71,6 @@ class UserOut(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _set_auth_cookie(response: Response, user: User) -> None:
-    token = create_access_token({"sub": str(user.id)})
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=settings.is_production,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-
-
 def _user_out(user: User) -> UserOut:
     return UserOut(
         id=user.id,
@@ -129,7 +116,7 @@ async def register(request: Request, body: RegisterRequest, response: Response, 
     except Exception:
         pass  # don't fail registration if email fails
 
-    _set_auth_cookie(response, user)
+    set_auth_cookie(response, user.id)
     return _user_out(user)
 
 
@@ -140,7 +127,7 @@ async def login(request: Request, body: LoginRequest, response: Response, sessio
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
-    _set_auth_cookie(response, user)
+    set_auth_cookie(response, user.id)
     return _user_out(user)
 
 

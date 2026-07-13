@@ -18,8 +18,9 @@ class Settings(BaseSettings):
 
     # JWT
     SECRET_KEY: str = "change-me-in-production-at-least-32-chars"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080   # 7 days
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    # Скользящая сессия: активным пользователям cookie продлевается в get_current_user,
+    # разлогин только после 30 дней неактивности.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200   # 30 days
 
     # Email (Yandex SMTP)
     SMTP_HOST: str = "smtp.yandex.ru"
