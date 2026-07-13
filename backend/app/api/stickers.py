@@ -11,7 +11,10 @@ from app.services.sticker import StickerService
 
 router = APIRouter(prefix="/stickers", tags=["stickers"])
 
-ALLOWED_STATUSES = {"confirmed", "awaiting_payment", "paid", "assigned", "picked_up", "in_transit", "delivered"}
+# Наличные: заказ подтверждён (confirmed) — стикеры доступны сразу, оплата при сдаче груза.
+# Безнал: только после оплаты ЮKassa (paid и далее). awaiting_payment намеренно исключён —
+# платёж создан, но не оплачен.
+ALLOWED_STATUSES = {"confirmed", "paid", "assigned", "picked_up", "in_transit", "delivered"}
 
 
 @router.get("/{order_id}.pdf")

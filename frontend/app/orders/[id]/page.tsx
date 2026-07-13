@@ -21,7 +21,9 @@ interface Order {
   payment_method: string | null
 }
 
-const STICKER_STATUSES = new Set(["confirmed", "awaiting_payment", "paid", "assigned", "picked_up", "in_transit", "delivered"])
+// Зеркало ALLOWED_STATUSES бэкенда (stickers.py): безнал — только после оплаты,
+// наличные (confirmed) — сразу.
+const STICKER_STATUSES = new Set(["confirmed", "paid", "assigned", "picked_up", "in_transit", "delivered"])
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -156,6 +158,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <Button onClick={downloadStickers} className="btn-shine w-full rounded-full bg-primary hover:bg-primary/90">
             <FileDown className="h-4 w-4 mr-2" /> Скачать стикеры PDF
           </Button>
+        )}
+        {order.status === "awaiting_payment" && (
+          <p className="text-center text-sm text-muted-foreground">
+            Стикеры будут доступны после оплаты заказа
+          </p>
         )}
       </div>
     </LayoutWithSidebar>

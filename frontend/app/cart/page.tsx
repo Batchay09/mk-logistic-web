@@ -78,7 +78,7 @@ export default function CartPage() {
         })
         qc.invalidateQueries({ queryKey: ["cart"] })
         qc.invalidateQueries({ queryKey: ["orders"] })
-        toast.success("Заказ(ы) подтверждены! Стикеры будут высланы на email.")
+        toast.success("Заказ(ы) подтверждены! Стикеры доступны на странице заказа.")
         router.push("/orders/active")
         return
       }
