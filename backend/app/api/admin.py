@@ -8,9 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_admin
-from app.db.models import (
-    Destination, Marketplace, PriceRule, ScheduleRule, User, UserRole
-)
+from app.db.models import Destination, Marketplace, PriceRule, ScheduleRule, User, UserRole
 from app.db.session import get_db
 from app.services.audit import AuditService
 
