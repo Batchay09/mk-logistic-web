@@ -7,9 +7,12 @@ type SidebarRole = "client" | "manager" | "admin"
 export function LayoutWithSidebar({
   children,
   role = "client",
+  wide = false,
 }: {
   children: React.ReactNode
   role?: SidebarRole
+  /** Широкий контент для табличных экранов (таблица заказов) */
+  wide?: boolean
 }) {
   return (
     <div className="flex h-dvh bg-muted">
@@ -28,7 +31,8 @@ export function LayoutWithSidebar({
         <main className="relative flex-1">
           <div
             className={
-              "max-w-5xl mx-auto p-4 md:p-6 md:pb-6 " +
+              (wide ? "max-w-[1720px]" : "max-w-5xl") +
+              " mx-auto p-4 md:p-6 md:pb-6 " +
               // На mobile нужен большой запас снизу: высота bottom-nav (~70px)
               // + safe-area home-indicator + динамическая browser bar в iOS Safari.
               "pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-6"

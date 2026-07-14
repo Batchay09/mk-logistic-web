@@ -18,9 +18,9 @@ interface OrdersGridProps {
   onCellRevert: (orderId: number, key: EditableKey) => void
 }
 
-const TH = "sticky top-0 z-10 bg-muted px-2.5 py-2 text-left text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground border-b-2 border-border whitespace-nowrap"
+const TH = "sticky top-0 z-10 bg-muted px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b-2 border-border whitespace-nowrap"
 const TD = "border-b border-r border-border p-0 whitespace-nowrap last:border-r-0"
-const CELL_INPUT = "w-full bg-transparent px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/50"
+const CELL_INPUT = "w-full bg-transparent px-2.5 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/50"
 
 function dirtyCls(isDirty: boolean, hasError: boolean): string {
   if (hasError) return " bg-destructive/10 ring-1 ring-inset ring-destructive"
@@ -52,8 +52,8 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
   }
 
   return (
-    <div className="max-h-[68vh] overflow-auto rounded-xl border border-border bg-card">
-      <table className="w-full min-w-[1080px] border-collapse text-xs">
+    <div className="max-h-[calc(100dvh-300px)] min-h-[320px] overflow-auto rounded-xl border border-border bg-card">
+      <table className="w-full min-w-[1180px] border-collapse text-[13px]">
         <thead>
           <tr>
             <th className={TH}>#</th>
@@ -77,7 +77,7 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
             return (
               <tr key={row.id} title={rowError} className={rowError ? "bg-destructive/5" : undefined}>
                 <td className={TD}>
-                  <span className="block px-2 py-1.5 tabular-nums text-muted-foreground">{row.id}</span>
+                  <span className="block px-2.5 py-2 tabular-nums text-muted-foreground">{row.id}</span>
                 </td>
                 <td className={TD + dirtyCls(isDirty(row, "company_name"), !!rowError)}>
                   <input
@@ -89,13 +89,13 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
                   />
                 </td>
                 <td className={TD}>
-                  <span className="block px-2 py-1.5 text-muted-foreground">
+                  <span className="block px-2.5 py-2 text-muted-foreground">
                     {row.client_name || "—"}
                     {row.client_phone && <span className="ml-1.5">· {row.client_phone}</span>}
                   </span>
                 </td>
                 <td className={TD}>
-                  <span className="block px-2 py-1.5">
+                  <span className="block px-2.5 py-2">
                     {row.destination_name || "—"}{" "}
                     <span className="text-muted-foreground uppercase">· {row.marketplace}</span>
                   </span>
@@ -121,7 +121,7 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
                   />
                 </td>
                 <td className={TD}>
-                  <span className="block px-2 py-1.5 text-right tabular-nums">
+                  <span className="block px-2.5 py-2 text-right tabular-nums">
                     {row.boxes_count}
                     {row.pallets_count > 0 && (
                       <span className="text-muted-foreground"> ({row.pallets_count} п)</span>
@@ -129,7 +129,7 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
                   </span>
                 </td>
                 <td className={TD}>
-                  <span className="block px-2 py-1.5 text-right font-medium tabular-nums">
+                  <span className="block px-2.5 py-2 text-right font-medium tabular-nums">
                     {row.total_amount.toLocaleString("ru-RU")} ₽
                   </span>
                 </td>
@@ -171,7 +171,7 @@ export function OrdersGrid({ rows, drafts, errors, onCellChange, onCellRevert }:
                     </div>
                   ) : (
                     <span
-                      className="block px-2 py-1.5"
+                      className="block px-2.5 py-2"
                       title="Оплата подтверждается на странице «Проверка оплат»"
                     >
                       <span className={st.cls}>{st.label}</span>

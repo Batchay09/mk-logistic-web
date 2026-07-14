@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +14,8 @@ from app.db.models import (
 from app.db.session import get_db
 from app.services.audit import AuditService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
@@ -25,6 +29,7 @@ class UserOut(BaseModel):
     company_name: Optional[str]
     role: str
     tg_id: Optional[int]
+    email_verified_at: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -147,6 +152,26 @@ async def set_user_role(
     except ValueError:
         raise HTTPException(status_code=400, detail="Неверная роль")
     await session.commit()
+    return {"ok": True}
+
+
+@router.post("/users/{user_id}/verify-email")
+async def verify_user_email(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_db),
+):
+    """Ручное подтверждение почты — фолбэк, когда письмо с кодом не доходит
+    (клиент связывается с поддержкой, админ подтверждает по телефону)."""
+    user = (await session.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if not user.email:
+        raise HTTPException(status_code=400, detail="У пользователя нет email")
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
+        logger.info("Админ id=%s вручную подтвердил email пользователя id=%s", current_user.id, user.id)
+        await session.commit()
     return {"ok": True}
 
 

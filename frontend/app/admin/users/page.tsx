@@ -16,6 +16,7 @@ import { Loader2, Pencil } from "lucide-react"
 interface User {
   id: number; email: string | null; full_name: string | null; phone: string | null
   company_name: string | null; role: string; tg_id: number | null
+  email_verified_at: string | null
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -46,6 +47,17 @@ export default function AdminUsersPage() {
       qc.invalidateQueries({ queryKey: ["admin-users"] })
       toast.success("Роль изменена")
       setEditUser(null)
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  // Фолбэк, когда письмо с кодом не доходит: клиент звонит в поддержку,
+  // админ подтверждает почту вручную — пользователь сразу может войти.
+  const verifyMut = useMutation({
+    mutationFn: (id: number) => api.post(`/admin/users/${id}/verify-email`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] })
+      toast.success("Почта подтверждена — пользователь может войти")
     },
     onError: (e: Error) => toast.error(e.message),
   })
@@ -89,6 +101,22 @@ export default function AdminUsersPage() {
                   <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {user.email || (user.tg_id ? `tg: ${user.tg_id}` : "—")}
+                    {user.email && !user.email_verified_at && (
+                      <span className="ml-2 inline-flex items-center gap-1.5">
+                        <Badge className="bg-warning/15 text-warning border-0 text-[11px]">
+                          не подтверждена
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 rounded-full px-2.5 text-[11px]"
+                          disabled={verifyMut.isPending}
+                          onClick={() => verifyMut.mutate(user.id)}
+                        >
+                          Подтвердить
+                        </Button>
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">{user.company_name || "—"}</TableCell>
                   <TableCell>

@@ -104,7 +104,7 @@ export default function ManagerOrdersTablePage() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <LayoutWithSidebar role="manager">
+    <LayoutWithSidebar role="manager" wide>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="flex items-center gap-2.5 text-2xl font-bold text-foreground">
