@@ -89,10 +89,16 @@ export default function LandingPage() {
                   Войти
                 </Button>
               </Link>
-              <Link href="/register">
-                <Button className="btn-shine h-10 rounded-full px-4 sm:px-5 text-sm font-medium shadow-sm tap-target">
-                  <span className="hidden sm:inline">Регистрация</span>
-                  <span className="sm:hidden">Войти</span>
+              {/* Мобильная шапка: единственная кнопка «Войти» ведёт на вход
+                  (регистрация доступна ссылкой со страницы входа) */}
+              <Link href="/login" className="sm:hidden">
+                <Button className="btn-shine h-10 rounded-full px-4 text-sm font-medium shadow-sm tap-target">
+                  Войти
+                </Button>
+              </Link>
+              <Link href="/register" className="hidden sm:inline-flex">
+                <Button className="btn-shine h-10 rounded-full px-5 text-sm font-medium shadow-sm tap-target">
+                  Регистрация
                 </Button>
               </Link>
             </div>
