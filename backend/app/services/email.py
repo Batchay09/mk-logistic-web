@@ -3,6 +3,7 @@ import html
 import logging
 import re
 import ssl
+from email.header import Header
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -29,6 +30,21 @@ def _html_to_text(html: str) -> str:
     text = re.sub(r'<[^>]+>', '', html)
     text = re.sub(r'\n[ \t]*\n+', '\n\n', text)
     return text.strip()
+
+
+def format_from_header(raw_from: str) -> str:
+    """Собрать RFC-корректный From из строки вида «Имя <адрес>».
+
+    Кириллическое имя кодируется (RFC 2047) ОТДЕЛЬНО от адреса. Наивное
+    присваивание msg["From"] = "МК Логистик <...>" кодирует заголовок целиком,
+    включая адрес, — Mail.ru отклоняет такие письма как «From без корректного
+    адреса отправителя» (550, нарушение RFC 5322).
+    """
+    display_name, addr = parseaddr(raw_from)
+    if not addr:
+        return raw_from
+    encoded_name = str(Header(display_name, "utf-8")) if display_name else ""
+    return formataddr((encoded_name, addr))
 
 
 def _smtp_configured() -> bool:
@@ -79,14 +95,14 @@ async def _send(
     from_addr = parseaddr(settings.EMAIL_FROM)[1] or settings.SMTP_USER or ""
     sender_domain = from_addr.split("@")[-1] if "@" in from_addr else None
 
-    msg["From"] = settings.EMAIL_FROM
+    msg["From"] = format_from_header(settings.EMAIL_FROM)
     msg["To"] = ", ".join(to)
     msg["Subject"] = subject
     # Date и Message-ID обязательны: письмо без них строгие фильтры (Mail.ru) режут как спам.
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = make_msgid(domain=sender_domain) if sender_domain else make_msgid()
     if from_addr:
-        msg["Reply-To"] = formataddr(("МК Логистик", from_addr))
+        msg["Reply-To"] = format_from_header(f"МК Логистик <{from_addr}>")
 
     context = ssl.create_default_context()
     try:
