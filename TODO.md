@@ -12,6 +12,11 @@
       затем обновить `/root/mk_tranzit_bot/.env` на VPS и перезапустить контейнер `bot`
 - [ ] Купить домен → DNS → обновить `nginx/nginx.conf` для боевого домена
 - [ ] HTTPS на **проде** через Let's Encrypt (на staging HTTPS уже есть)
+- [ ] **Включить DKIM для `da-net.net`** в панели SpaceWeb (почта → домен → DKIM) и добавить DMARC
+      TXT-запись `_dmarc` → `v=DMARC1; p=none; rua=mailto:mk-logistic@da-net.net`.
+      Без DKIM Mail.ru (bk.ru/mail.ru) молча дропает письма (SMTP-передача при этом успешна) —
+      коды подтверждения до клиентов на Mail.ru не доходят. SPF уже настроен. То же самое
+      сделать для боевого домена при переезде.
 - [ ] Заполнить боевой `.env` на VPS (`SECRET_KEY`, SMTP, YooKassa, ADMIN_*)
 - [ ] Подключить ЮKassa на **проде**: боевые `shop_id` + `secret_key` + webhook (на staging тестовый магазин подключён, сквозной платёж прошёл)
 - [ ] Первый `./deploy.sh` на прод, проверить что бот работает на той же БД

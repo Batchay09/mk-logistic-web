@@ -99,7 +99,10 @@ async def _send(
             username=settings.SMTP_USER,
             password=settings.SMTP_PASSWORD,
         )
-        logger.info("Email '%s' отправлен: %s", subject, to)
+        # Код из темы маскируем: OTP в логах = угон аккаунта при доступе к логам.
+        # В skip-ветке выше subject остаётся открытым намеренно — это локальная
+        # разработка без SMTP, и код оттуда больше взять неоткуда.
+        logger.info("Email '%s' отправлен: %s", re.sub(r"\d{4,}", "***", subject), to)
     except (aiosmtplib.errors.SMTPException, OSError) as exc:
         # OSError ловит DNS-резолюшен (gaierror) и сетевые сбои.
         logger.warning("SMTP send failed for '%s' to %s: %s", subject, to, exc)
