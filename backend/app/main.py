@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -6,6 +8,14 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.api import auth, calculator, client, stickers, manager, admin, payments
+
+# Без basicConfig INFO-логи приложения (отправка писем, действия менеджера)
+# никуда не пишутся: uvicorn настраивает только свои логгеры, а lastResort-хендлер
+# Python показывает лишь WARNING+. Диагностика почты без этого слепая.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
