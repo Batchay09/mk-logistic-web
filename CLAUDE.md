@@ -120,6 +120,7 @@ bash deploy-staging.sh
 - Middleware `frontend/middleware.ts` — проверяет cookie, редиректит на `/login`
 - `Depends(get_current_user)` в FastAPI для защищённых роутов
 - Bootstrap-аккаунты admin/manager создаются сразу подтверждёнными (ящики могут не существовать)
+- Фолбэк при недоставке кодов: `POST /admin/users/{id}/verify-email` — админ подтверждает почту вручную (кнопка в `/admin/users`); на экранах кода — ссылка на `/contacts`
 
 ## Роли пользователей
 
@@ -161,6 +162,7 @@ bash deploy-staging.sh
 - **Docker сеть** — `mk-web` (внутренняя) + `mk-shared` (external, общая с ботом для PostgreSQL)
 - **Next.js standalone** — `output: "standalone"` в `next.config.ts` для минимального Docker-образа
 - **Email best-effort** — `services/email.py::_send` глотает SMTP-ошибки и логирует warning. Бизнес-операции (заказ, оплата) не падают если SMTP не настроен или недоступен. Хосты с `example.com`/`localhost` пропускаются как заглушки.
+- **Email From — только через `format_from_header`** (⚠️ грабли): наивное `msg["From"] = "МК Логистик <...>"` кодирует кириллический заголовок base64 ЦЕЛИКОМ вместе с адресом — нарушение RFC 5322, Mail.ru отклоняет 550 «spam». Имя кодируется отдельно от адреса. OTP-коды в логах маскируются (`re.sub` в success-логе `_send`).
 - **Чат поддержки** — переписка клиент↔менеджер прямо на сайте (`support_conversations`/`support_messages`, миграции 0003–0004), обновление polling 3–5 сек. У клиента — плавающий виджет `ChatWidget` на всех страницах кабинета (пункт «Поддержка» открывает его), у менеджера — инбокс `/manager/chats` с живым бейджем непрочитанного. Вложения-картинки (JPEG/PNG/WEBP ≤5 МБ) валидируются и пере-кодируются через Pillow (`services/attachments.py`), хранятся в БД (`attachment_data`, `deferred`), отдаются auth-gated. Эндпоинты: `/client/chat*`, `/manager/chats*`.
 - **Безопасность** — rate-limiting (slowapi, ключ по `X-Real-IP` — не подделать; в т.ч. на checkout и создании платежа), fail-fast `SECRET_KEY` в prod, webhook ЮKassa верифицируется через API (не по телу), URL возврата после оплаты строится на бэке от `APP_URL` (клиент шлёт только `return_path`), `order_ids` с лимитом и дедупом, checkout принимает только `cash` (безнал — исключительно `/payments/yookassa/create`), согласие на ПД фиксируется в `users.pd_consent_at`, экранирование HTML в письмах, валидация/пере-кодирование загружаемых картинок. Пройден аудит — CRITICAL нет.
 - **Дизайн — Aurora Glass** — иммёрсивный стиль во всём приложении: брендовый оранжевый, стекло, световые ауры, свечение, глубина. Никакого хардкода цветов (`bg-[#D4512B]` ❌) — только токены (`bg-primary`, `text-foreground`, `border-border`), автоадаптация light/dark. Переиспользуемые классы/компоненты в `frontend/app/globals.css` (`.glass`, `.glass-brand`, `.aurora-blob`, `.btn-shine`) и `AuroraHero`. Справка → `frontend/DESIGN_SYSTEM.md`.
