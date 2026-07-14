@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,13 @@ export function VerifyEmailForm({
         Подтвердить
       </Button>
       <ResendCodeButton email={email} purpose="register" />
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        Письмо не приходит? Проверьте папку «Спам» или{" "}
+        <Link href="/contacts" target="_blank" className="text-primary hover:underline">
+          свяжитесь с нами
+        </Link>{" "}
+        — подтвердим вручную.
+      </p>
     </form>
   )
 }

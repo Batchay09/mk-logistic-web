@@ -145,6 +145,13 @@ function ConfirmForm({ email }: { email: string }) {
             Сохранить пароль
           </Button>
           <ResendCodeButton email={email} purpose="reset" />
+          <p className="text-center text-xs leading-relaxed text-muted-foreground">
+            Письмо не приходит? Проверьте папку «Спам» или{" "}
+            <Link href="/contacts" target="_blank" className="text-primary hover:underline">
+              свяжитесь с нами
+            </Link>{" "}
+            — поможем восстановить доступ.
+          </p>
         </form>
       </Form>
     </div>
