@@ -9,7 +9,20 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
 
-from app.db.models import Order
+from app.db.models import Order, PaymentMethod
+
+# Подписи способа оплаты для печати на стикере. В QR-код при этом уходит
+# сырое значение enum (cash/cashless) — оно машинный контракт со сканером
+# и Excel-выгрузкой, менять его нельзя.
+_PAYMENT_LABELS = {
+    PaymentMethod.CASH.value: "Наличные",
+    PaymentMethod.CASHLESS.value: "Безнал",
+}
+
+
+def _payment_label(payment_type: str) -> str:
+    """Человекочитаемая подпись оплаты; незнакомое значение печатаем как есть."""
+    return _PAYMENT_LABELS.get(payment_type, payment_type)
 
 
 def _generate_qr_data(order: Order, payment_type: str = "") -> str:
@@ -99,11 +112,14 @@ class StickerService:
         tg_id = str(order.user.tg_id) if order.user.tg_id else str(order.user.id)
         client_id = f"ID: {tg_id}"
 
+        # В QR — сырое значение (машинный контракт), на бумагу — русская подпись.
         qr_data = _generate_qr_data(order, payment_type)
+        payment_label = _payment_label(payment_type)
         qr_size = 10 * mm
         qr_x = 46 * mm
         qr_y = 28 * mm
         text_center_x = (width - qr_size) / 2
+        max_text_width = width - 4 * mm  # поля по 2 мм с каждой стороны
 
         for i in range(1, boxes_count + 1):
             _add_qr_to_canvas(c, qr_data, qr_x, qr_y, qr_size)
@@ -118,8 +134,13 @@ class StickerService:
             c.drawCentredString(text_center_x, 17 * mm, destination)
 
             count_str = f"{i}/{boxes_count}"
-            full_str = f"{count_str}   {payment_type}" if payment_type else count_str
-            c.setFont(font_name, 14)
+            full_str = f"{count_str}   {payment_label}" if payment_label else count_str
+            # «Наличные» заметно шире прежнего «cash»: при большом числе коробок
+            # строка вида «100/100   Наличные» не влезала бы в 58 мм — ужимаем кегль.
+            font_size = 14.0
+            while font_size > 8 and pdfmetrics.stringWidth(full_str, font_name, font_size) > max_text_width:
+                font_size -= 0.5
+            c.setFont(font_name, font_size)
             c.drawCentredString(width / 2, 9 * mm, full_str)
 
             c.setFont(font_name, 9)
