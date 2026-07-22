@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { api, API_URL } from "@/lib/api"
+import { startPayment } from "@/lib/payments"
 import { statusMeta } from "@/lib/order-status"
-import { FileDown, ArrowLeft, Loader2 } from "lucide-react"
+import { CreditCard, FileDown, ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface Order {
@@ -36,11 +37,24 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const [paying, setPaying] = useState(false)
 
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: ["order", id],
     queryFn: () => api.get(`/client/orders/${id}`),
   })
+
+  // Повторная оплата заказа, зависшего в ожидании: клиент мог закрыть форму
+  // ЮKassa или платёж сорвался — заново уводим его на оплату этого же заказа.
+  async function payNow() {
+    setPaying(true)
+    try {
+      await startPayment([Number(id)])
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Не удалось создать платёж")
+      setPaying(false)
+    }
+  }
 
   async function downloadStickers() {
     try {
@@ -160,9 +174,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </Button>
         )}
         {order.status === "awaiting_payment" && (
-          <p className="text-center text-sm text-muted-foreground">
-            Стикеры будут доступны после оплаты заказа
-          </p>
+          <div className="space-y-3">
+            <Button
+              onClick={payNow}
+              disabled={paying}
+              className="btn-shine w-full rounded-full bg-primary hover:bg-primary/90"
+            >
+              {paying ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="mr-2 h-4 w-4" />
+              )}
+              Оплатить заказ
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Оплата не завершена. Стикеры будут доступны после оплаты заказа.
+            </p>
+          </div>
         )}
       </div>
     </LayoutWithSidebar>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
+import { startPayment, syncPayments } from "@/lib/payments"
 import { Trash2, Plus, ShoppingCart, CreditCard, Banknote, Loader2 } from "lucide-react"
 
 interface Order {
@@ -39,12 +40,6 @@ interface CheckoutResult {
   total?: number
 }
 
-interface YooKassaPayment {
-  payment_id: string
-  confirmation_url: string
-  total: number
-}
-
 export default function CartPage() {
   const router = useRouter()
   const qc = useQueryClient()
@@ -55,6 +50,23 @@ export default function CartPage() {
     queryKey: ["cart"],
     queryFn: () => api.get("/client/orders?status=new"),
   })
+
+  // Подбираем заказы, застрявшие в незавершённой оплате: если клиент закрыл
+  // форму ЮKassa или платёж протух, заказ сам вернётся в корзину.
+  useEffect(() => {
+    syncPayments()
+      .then((res) => {
+        if (!res.released_order_ids.length && !res.paid_order_ids.length) return
+        qc.invalidateQueries({ queryKey: ["cart"] })
+        qc.invalidateQueries({ queryKey: ["orders"] })
+        if (res.released_order_ids.length) {
+          toast.info("Незавершённая оплата отменена — заказы вернулись в корзину")
+        }
+      })
+      .catch(() => {
+        // ЮKassa не настроена или недоступна — корзину это ломать не должно.
+      })
+  }, [qc])
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/client/orders/${id}`),
@@ -86,12 +98,8 @@ export default function CartPage() {
       // Безнал — создаём платёж в ЮKassa напрямую по заказам из корзины.
       // Заказы остаются в корзине (статус NEW), пока платёж не создан: если
       // ЮKassa вернёт ошибку, ничего не теряется и оплату можно повторить.
-      // Только путь — полный URL возврата бэкенд строит сам от APP_URL
-      const payment = await api.post<YooKassaPayment>("/payments/yookassa/create", {
-        order_ids: orders.map((o) => o.id),
-        return_path: "/orders/active",
-      })
-      window.location.href = payment.confirmation_url
+      // Возврат — на /payments/result, где статус сверяется с ЮKassa.
+      await startPayment(orders.map((o) => o.id))
     } catch (e: Error | unknown) {
       toast.error(e instanceof Error ? e.message : "Ошибка оплаты")
       setPaying(false)
