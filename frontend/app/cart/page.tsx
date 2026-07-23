@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
-import { startPayment, syncPayments } from "@/lib/payments"
+import { startPayment } from "@/lib/payments"
 import { Trash2, Plus, ShoppingCart, CreditCard, Banknote, Loader2 } from "lucide-react"
 
 interface Order {
@@ -50,23 +50,6 @@ export default function CartPage() {
     queryKey: ["cart"],
     queryFn: () => api.get("/client/orders?status=new"),
   })
-
-  // Подбираем заказы, застрявшие в незавершённой оплате: если клиент закрыл
-  // форму ЮKassa или платёж протух, заказ сам вернётся в корзину.
-  useEffect(() => {
-    syncPayments()
-      .then((res) => {
-        if (!res.released_order_ids.length && !res.paid_order_ids.length) return
-        qc.invalidateQueries({ queryKey: ["cart"] })
-        qc.invalidateQueries({ queryKey: ["orders"] })
-        if (res.released_order_ids.length) {
-          toast.info("Незавершённая оплата отменена — заказы вернулись в корзину")
-        }
-      })
-      .catch(() => {
-        // ЮKassa не настроена или недоступна — корзину это ломать не должно.
-      })
-  }, [qc])
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/client/orders/${id}`),

@@ -1,11 +1,13 @@
 "use client"
 
 import { use, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { api, API_URL } from "@/lib/api"
 import { startPayment } from "@/lib/payments"
@@ -37,7 +39,10 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const qc = useQueryClient()
+  const router = useRouter()
   const [paying, setPaying] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: ["order", id],
@@ -55,6 +60,24 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setPaying(false)
     }
   }
+
+  const cancelMut = useMutation({
+    mutationFn: () => api.post(`/client/orders/${id}/cancel`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["order", id] })
+      qc.invalidateQueries({ queryKey: ["orders-active"] })
+      qc.invalidateQueries({ queryKey: ["orders"] })
+      setCancelOpen(false)
+      toast.success("Заказ отменён")
+      router.push("/orders/active")
+    },
+    onError: (e: Error) => {
+      setCancelOpen(false)
+      // 409 — за время раздумий платёж всё же прошёл: заказ стал оплаченным.
+      toast.error(e.message)
+      qc.invalidateQueries({ queryKey: ["order", id] })
+    },
+  })
 
   async function downloadStickers() {
     try {
@@ -187,12 +210,44 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
               Оплатить заказ
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setCancelOpen(true)}
+              className="w-full rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              Отменить заказ
+            </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Оплата не завершена. Стикеры будут доступны после оплаты заказа.
+              Заказ ожидает оплаты. Стикеры будут доступны после оплаты.
             </p>
           </div>
         )}
       </div>
+
+      <Dialog open={cancelOpen} onOpenChange={(o) => !o && setCancelOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Отменить заказ #{id}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Заказ уйдёт в историю со статусом «Отменён». Это действие нельзя вернуть.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setCancelOpen(false)}>
+              Не отменять
+            </Button>
+            <Button
+              variant="destructive"
+              className="rounded-full"
+              onClick={() => cancelMut.mutate()}
+              disabled={cancelMut.isPending}
+            >
+              {cancelMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Отменить заказ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </LayoutWithSidebar>
   )
 }

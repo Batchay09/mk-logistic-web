@@ -1,5 +1,6 @@
 import asyncio
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -9,6 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, undefer
 
+from app.api.payments import _fetch_payment, _mark_orders_paid, _orders_by_payment
+from app.core.config import settings
 from app.core.dependencies import require_client
 from app.core.rate_limit import limiter
 from app.db.models import (
@@ -235,6 +238,79 @@ async def delete_order(
     if order.status != OrderStatus.NEW:
         raise HTTPException(status_code=400, detail="Можно удалить только заказ в статусе NEW")
     await session.delete(order)
+    await session.commit()
+
+
+@router.post("/orders/{order_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
+async def cancel_order(
+    request: Request,
+    order_id: int,
+    current_user: User = Depends(require_client),
+    session: AsyncSession = Depends(get_db),
+):
+    """Клиент отменяет неоплаченный заказ, который передумал оплачивать.
+
+    Отменять можно только заказ «Ожидает оплаты». Перед отменой сверяем платёж
+    с ЮKassa: если он всё же прошёл — не отменяем, а помечаем оплаченным
+    (иначе клиент, нажав «отмена» на форме и оплатив в другой вкладке, потерял бы
+    заказ при списанных деньгах). Если ЮKassa недоступна — отмену разрешаем:
+    запоздавший «succeeded» по отменённому заказу webhook не воскресит, а залогирует
+    для ручного возврата.
+
+    Корзина из нескольких заказов оплачивается ОДНИМ платежом (общий
+    yookassa_payment_id). Платёж неделим, поэтому отменяем всю группу заказов,
+    ждущих этот платёж, — иначе оплата исходного платежа целиком прошла бы за
+    группу, а выполнилась бы лишь часть (деньги за отменённый заказ повисли бы).
+    """
+    order = (await session.execute(
+        select(Order)
+        .where(Order.id == order_id, Order.user_id == current_user.id)
+        .with_for_update(of=Order)
+    )).scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    if order.status == OrderStatus.CANCELED:
+        return  # идемпотентность
+    if order.status != OrderStatus.AWAITING_PAYMENT:
+        raise HTTPException(status_code=400, detail="Отменить можно только неоплаченный заказ")
+
+    pid = order.yookassa_payment_id
+    if pid and settings.YOOKASSA_SHOP_ID and settings.YOOKASSA_SECRET_KEY:
+        try:
+            payment = await _fetch_payment(pid)
+        except Exception:
+            payment = None  # ЮKassa недоступна — отменяем, webhook-гард подстрахует
+        if payment and payment.status == "succeeded" and getattr(payment, "paid", False):
+            # Платёж прошёл — не отменяем, помечаем всю группу оплаченной.
+            group = await _orders_by_payment(session, pid)
+            try:
+                paid_amount = Decimal(str(payment.amount.value))
+            except (InvalidOperation, AttributeError, TypeError):
+                paid_amount = Decimal("0")
+            try:
+                await _mark_orders_paid(session, group, paid_amount, pid)
+                await session.commit()
+            except HTTPException:
+                await session.rollback()
+            raise HTTPException(status_code=409, detail="Заказ уже оплачен")
+
+    # Отменяем всю группу, ждущую этот платёж (при отсутствии pid — только сам заказ).
+    if pid:
+        group = (await session.execute(
+            select(Order)
+            .where(
+                Order.yookassa_payment_id == pid,
+                Order.user_id == current_user.id,
+                Order.status == OrderStatus.AWAITING_PAYMENT,
+            )
+            .with_for_update(of=Order)
+        )).scalars().all()
+    else:
+        group = [order]
+
+    for o in group:
+        o.status = OrderStatus.CANCELED
     await session.commit()
 
 

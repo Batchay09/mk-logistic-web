@@ -49,12 +49,11 @@ class YooKassaCreateRequest(BaseModel):
 
 
 class PaymentSyncResponse(BaseModel):
-    """Итог сверки платежей клиента с ЮKassa."""
+    """Итог сверки платежа с ЮKassa для страницы результата."""
 
     status: Literal["succeeded", "canceled", "pending", "none"]
     order_ids: List[int] = []
     paid_order_ids: List[int] = []
-    released_order_ids: List[int] = []
 
 
 # Сколько ждём ответа ЮKassa, прежде чем сдаться (её SDK своего таймаута не ставит).
@@ -204,9 +203,26 @@ async def _mark_orders_paid(
 
     Идемпотентно: заказы, уже помеченные PAID, пропускаются — webhook от ЮKassa
     может прийти повторно, и то же самое делает сверка при возврате с оплаты.
-    Ничего не коммитит — коммит на вызывающей стороне.
+    Помечаем оплаченными только заказы в AWAITING_PAYMENT: если клиент успел
+    отменить заказ, а оплата всё же прошла, не воскрешаем его молча — логируем
+    для ручной проверки (возможен возврат). Ничего не коммитит — коммит выше.
     """
-    expected_total = sum((o.total_amount for o in orders), Decimal("0"))
+    # Заказы, которые вообще нельзя помечать оплаченными (отменён/уже в работе).
+    # Их сумму НЕ включаем в сверку: иначе полная оплата группы прошла бы проверку,
+    # а по факту оплатился лишь остаток — деньги за отменённый заказ повисли бы.
+    for order in orders:
+        if order.status not in (OrderStatus.AWAITING_PAYMENT, OrderStatus.PAID):
+            logger.warning(
+                "Платёж %s прошёл по заказу #%s в статусе %s — не помечаем PAID, "
+                "нужна ручная проверка (возможен возврат)",
+                payment_id, order.id, order.status.value,
+            )
+
+    to_mark = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT]
+    if not to_mark:
+        return []  # всё уже оплачено или отменено — делать нечего
+
+    expected_total = sum((o.total_amount for o in to_mark), Decimal("0"))
     if paid_amount < expected_total:
         logger.error(
             "Сумма платежа %s (%s ₽) меньше суммы заказов (%s ₽) — PAID не проставляем",
@@ -215,10 +231,7 @@ async def _mark_orders_paid(
         raise HTTPException(status_code=400, detail="Сумма платежа не совпадает с заказом")
 
     newly_paid_ids: List[int] = []
-    for order in orders:
-        if order.status == OrderStatus.PAID:
-            continue
-
+    for order in to_mark:
         order.status = OrderStatus.PAID
         newly_paid_ids.append(order.id)
 
@@ -257,35 +270,6 @@ async def _mark_orders_paid(
     return newly_paid_ids
 
 
-async def _release_orders(
-    session: AsyncSession, orders: List[Order], payment_id: Optional[str] = None
-) -> List[int]:
-    """Возвращает неоплаченные заказы в корзину (NEW).
-
-    Вызывается, когда ЮKassa сообщила об отмене платежа (клиент закрыл форму,
-    не хватило средств или истёк срок оплаты). Без этого заказ навсегда застревал
-    в AWAITING_PAYMENT: из корзины пропал, удалить нельзя, оплатить повторно неоткуда.
-
-    yookassa_payment_id намеренно НЕ обнуляем — по нему страница результата
-    оплаты (и повторное обновление этой страницы) узнаёт судьбу платежа.
-    Следующая попытка оплаты перезапишет его новым id.
-
-    Идемпотентно: заказы вне AWAITING_PAYMENT не трогаем. Если передан payment_id,
-    откатываем только заказы, которые всё ещё ждут именно этот платёж — иначе
-    запоздавшее «отменён» по прошлой попытке выбросило бы из оплаты уже начатую новую.
-    """
-    released_ids: List[int] = []
-    for order in orders:
-        if order.status != OrderStatus.AWAITING_PAYMENT:
-            continue
-        if payment_id and order.yookassa_payment_id != payment_id:
-            continue
-        order.status = OrderStatus.NEW
-        order.payment_method = None
-        released_ids.append(order.id)
-    return released_ids
-
-
 @router.post("/yookassa/webhook")
 async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get_db)):
     """Обрабатывает уведомления ЮKassa о платежах.
@@ -311,9 +295,10 @@ async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    # Отмена так же важна, как успех: без неё заказ навсегда виснет в AWAITING_PAYMENT.
+    # Успех обрабатываем; отмену только логируем — заказ остаётся «Ожидает оплаты»
+    # (клиент может оплатить заново или отменить сам). Прочее игнорируем.
     if event.get("event") not in ("payment.succeeded", "payment.canceled"):
-        return {"ok": True}  # прочие события игнорируем
+        return {"ok": True}
 
     payment_id = (event.get("object") or {}).get("id")
     if not payment_id:
@@ -331,26 +316,21 @@ async def yookassa_webhook(request: Request, session: AsyncSession = Depends(get
         logger.warning("Платёж %s не найден в ЮKassa", payment_id)
         return {"ok": True}
 
-    # Заказы ищем в НАШЕЙ БД по payment_id, а не по metadata из тела webhook.
-    orders = await _orders_by_payment(session, str(payment_id))
-    if not orders:
-        logger.warning("Webhook для неизвестного payment_id: %s", payment_id)
-        return {"ok": True}
-
     if payment.status == "canceled":
-        released = await _release_orders(session, orders, str(payment_id))
-        await session.commit()
-        if released:
-            reason = getattr(getattr(payment, "cancellation_details", None), "reason", None)
-            logger.info(
-                "Платёж %s отменён (%s) — заказы %s возвращены в корзину",
-                payment_id, reason or "без причины", released,
-            )
+        reason = getattr(getattr(payment, "cancellation_details", None), "reason", None)
+        logger.info("Платёж %s отменён (%s) — заказ ждёт новой оплаты",
+                    payment_id, reason or "без причины")
         return {"ok": True}
 
     if payment.status != "succeeded" or not getattr(payment, "paid", False):
         logger.warning("Платёж %s не подтверждён ЮKassa (status=%s)",
                        payment_id, getattr(payment, "status", None))
+        return {"ok": True}
+
+    # Заказы ищем в НАШЕЙ БД по payment_id, а не по metadata из тела webhook.
+    orders = await _orders_by_payment(session, str(payment_id))
+    if not orders:
+        logger.warning("Webhook для неизвестного payment_id: %s", payment_id)
         return {"ok": True}
 
     # Сверяем сумму: реально оплаченное не меньше суммы заказов.
@@ -372,68 +352,70 @@ async def sync_yookassa_payments(
     current_user: User = Depends(require_client),
     session: AsyncSession = Depends(get_db),
 ):
-    """Сверяет незавершённые платежи клиента с ЮKassa и чинит застрявшие заказы.
+    """Узнаёт настоящий статус платежа у ЮKassa и ловит опоздавший «succeeded».
 
-    Возврат на return_url не является доказательством оплаты, а webhook может
-    задержаться или не дойти вовсе. Поэтому при возврате с формы оплаты и при
-    открытии корзины спрашиваем настоящий статус у ЮKassa и приводим заказы
-    в соответствие: succeeded → PAID (со стикерами), canceled → обратно в корзину.
+    Возврат на return_url оплату НЕ доказывает, а webhook об успехе может чуть
+    отстать от редиректа. Поэтому страница результата спрашивает статус здесь.
 
-    Заодно закрывает случай «клиент просто закрыл вкладку»: ЮKassa сама отменяет
-    неоплаченный платёж по истечении срока, и ближайшая сверка вернёт заказ в корзину.
+    Статус заказа сверка НЕ откатывает: непрошедший платёж оставляет заказ
+    «Ожидает оплаты» (клиент оплатит заново или отменит сам). Единственное
+    изменение состояния — succeeded → PAID, если webhook ещё не успел.
+
+    Обычно вызывается с payment_id только что оформленного платежа. Без него
+    (например, потерян sessionStorage) проверяем ожидающие заказы клиента —
+    тоже лишь чтобы поймать успех.
     """
     if not settings.YOOKASSA_SHOP_ID or not settings.YOOKASSA_SECRET_KEY:
         raise HTTPException(status_code=503, detail="ЮKassa не настроена")
 
-    # Блокировка строк и порядок по id — как в _orders_by_payment: сверка может
-    # столкнуться с webhook по тому же платежу.
-    pending_orders = list((await session.execute(
-        select(Order)
-        .options(selectinload(Order.user), selectinload(Order.destination))
-        .where(
-            Order.user_id == current_user.id,
-            Order.status == OrderStatus.AWAITING_PAYMENT,
-        )
-        .order_by(Order.id)
-        .limit(SYNC_ORDERS_LIMIT)
-        .with_for_update(of=Order)
-    )).scalars().all())
-
-    paid_ids: List[int] = []
-    released_ids: List[int] = []
-
-    # Заказы без платежа — брак (платёж не создался, а статус проставился).
-    # Возвращаем в корзину сразу, спрашивать про них у ЮKassa нечего.
-    orphans = [o for o in pending_orders if not o.yookassa_payment_id]
-    if orphans:
-        released_ids += await _release_orders(session, orphans)
-
-    by_payment: dict[str, List[Order]] = {}
-    for order in pending_orders:
-        if order.yookassa_payment_id:
+    if payment_id:
+        # Блокировка строк: сверка может столкнуться с webhook по тому же платежу.
+        orders = await _orders_by_payment(session, payment_id)
+        orders = [o for o in orders if o.user_id == current_user.id]
+        if not orders:
+            raise HTTPException(status_code=404, detail="Платёж не найден")
+        by_payment = {payment_id: orders}
+    else:
+        pending = list((await session.execute(
+            select(Order)
+            .options(selectinload(Order.user), selectinload(Order.destination))
+            .where(
+                Order.user_id == current_user.id,
+                Order.status == OrderStatus.AWAITING_PAYMENT,
+                Order.yookassa_payment_id.is_not(None),
+            )
+            .order_by(Order.id)
+            .limit(SYNC_ORDERS_LIMIT)
+            .with_for_update(of=Order)
+        )).scalars().all())
+        by_payment = {}
+        for order in pending:
             by_payment.setdefault(order.yookassa_payment_id, []).append(order)
 
+    paid_ids: List[int] = []
+    seen_statuses: set[str] = set()
+
+    # Необработанный из-за лимита остаток считаем «ещё висит» — иначе агрегатный
+    # статус мог бы ошибочно стать canceled по одним лишь первым платежам.
     if len(by_payment) > SYNC_BATCH_LIMIT:
-        logger.info(
-            "Клиент id=%s: сверяем %s платежей из %s, остальные — при следующем заходе",
-            current_user.id, SYNC_BATCH_LIMIT, len(by_payment),
-        )
+        seen_statuses.add("pending")
 
     for pid in list(by_payment)[:SYNC_BATCH_LIMIT]:
         orders = by_payment[pid]
         try:
             payment = await _fetch_payment(pid)
         except Exception as e:
-            # Недоступность ЮKassa не должна ломать корзину — оставляем как есть.
+            # Недоступность ЮKassa не должна ронять страницу — оставляем как есть.
             logger.warning("Сверка платежа %s не удалась: %s", pid, e)
+            seen_statuses.add("pending")
             continue
 
         if not payment:
+            seen_statuses.add("pending")
             continue
 
-        if payment.status == "canceled":
-            released_ids += await _release_orders(session, orders, pid)
-        elif payment.status == "succeeded" and getattr(payment, "paid", False):
+        seen_statuses.add(payment.status)
+        if payment.status == "succeeded" and getattr(payment, "paid", False):
             try:
                 paid_amount = Decimal(str(payment.amount.value))
             except (InvalidOperation, AttributeError, TypeError):
@@ -441,51 +423,21 @@ async def sync_yookassa_payments(
             try:
                 paid_ids += await _mark_orders_paid(session, orders, paid_amount, pid)
             except HTTPException:
-                # Недоплата: заказы оставляем менеджеру, корзину не ломаем.
+                # Недоплата: заказ оставляем менеджеру, статус не трогаем.
                 logger.error("Сверка: сумма платежа %s не совпала с заказами", pid)
 
     await session.commit()
 
-    if released_ids:
-        logger.info("Сверка вернула в корзину заказы %s (клиент id=%s)", released_ids, current_user.id)
-
-    # Статус для страницы результата. Если фронт передал id платежа —
-    # отвечаем строго по нему (в т.ч. когда webhook всё сделал раньше нас).
-    if payment_id:
-        target = list((await session.execute(
-            select(Order).where(
-                Order.yookassa_payment_id == payment_id,
-                Order.user_id == current_user.id,
-            )
-        )).scalars().all())
-        if not target:
-            raise HTTPException(status_code=404, detail="Платёж не найден")
-        statuses = {o.status for o in target}
-        if statuses == {OrderStatus.PAID}:
-            status = "succeeded"
-        elif OrderStatus.AWAITING_PAYMENT in statuses:
-            status = "pending"
-        else:
-            status = "canceled"
-        return PaymentSyncResponse(
-            status=status,
-            order_ids=[o.id for o in target],
-            paid_order_ids=paid_ids,
-            released_order_ids=released_ids,
-        )
-
-    if paid_ids:
+    # Статус для страницы результата. Оплата приоритетна; иначе платёж ещё висит
+    # (клиент не заплатил или банк не подтвердил) — для UX это одно «не завершено».
+    order_ids = sorted({o.id for orders in by_payment.values() for o in orders})
+    if paid_ids or seen_statuses == {"succeeded"}:
         status = "succeeded"
-    elif released_ids:
-        status = "canceled"
-    elif by_payment:
-        status = "pending"
-    else:
+    elif not by_payment:
         status = "none"
+    elif "canceled" in seen_statuses and "pending" not in seen_statuses:
+        status = "canceled"
+    else:
+        status = "pending"
 
-    return PaymentSyncResponse(
-        status=status,
-        order_ids=paid_ids + released_ids,
-        paid_order_ids=paid_ids,
-        released_order_ids=released_ids,
-    )
+    return PaymentSyncResponse(status=status, order_ids=order_ids, paid_order_ids=paid_ids)

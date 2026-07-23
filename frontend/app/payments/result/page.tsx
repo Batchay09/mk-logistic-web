@@ -2,56 +2,61 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { LayoutWithSidebar } from "@/app/layout-with-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  forgetPayment,
-  recallPayment,
-  startPayment,
-  syncPayments,
-  type PaymentStatus,
-} from "@/lib/payments"
-import { CheckCircle2, XCircle, Loader2, ShoppingCart, RefreshCw, FileDown } from "lucide-react"
+import { forgetPayment, recallPayment, startPayment, syncPayments } from "@/lib/payments"
+import { CheckCircle2, Clock, Loader2, ShoppingCart, RefreshCw, FileDown } from "lucide-react"
 
-// Платёж редко подтверждается мгновенно: webhook от ЮKassa может отстать
-// от редиректа на пару секунд. Поэтому не выносим вердикт сразу, а
-// переспрашиваем несколько раз, прежде чем показать «обрабатывается».
-const POLL_ATTEMPTS = 5
-const POLL_DELAY_MS = 2000
+// При успешной оплате ЮKassa обычно подтверждает платёж ещё до редиректа, но
+// webhook об успехе может отстать на секунду-две. Делаем максимум 2 короткие
+// проверки, чтобы поймать этот случай, — и не крутим спиннер дольше.
+const EXTRA_CHECKS = 2
+const CHECK_DELAY_MS = 1500
+
+// Что показываем: проверяем / оплачено / не завершено / нечего проверять.
+type View = "checking" | "paid" | "unpaid" | "empty"
 
 export default function PaymentResultPage() {
-  const router = useRouter()
-  const [status, setStatus] = useState<PaymentStatus | "checking">("checking")
+  const [view, setView] = useState<View>("checking")
   const [orderIds, setOrderIds] = useState<number[]>([])
   const [retrying, setRetrying] = useState(false)
-  // Опрос переживает уход со страницы — не трогаем state после размонтирования.
   const alive = useRef(true)
 
   const check = useCallback(async () => {
-    setStatus("checking")
+    setView("checking")
     for (let attempt = 0; ; attempt++) {
       let result
       try {
         result = await syncPayments(recallPayment())
       } catch {
-        // Сверка не удалась (ЮKassa недоступна или платёж не найден) — не пугаем
-        // клиента ошибкой: заказы в любом случае видны в кабинете.
-        if (alive.current) setStatus("none")
+        // Сверка не удалась (ЮKassa недоступна или платёж не найден) — заказы
+        // всё равно видны в кабинете, не пугаем ошибкой.
+        if (alive.current) setView("empty")
         return
       }
       if (!alive.current) return
 
-      if (result.status !== "pending" || attempt >= POLL_ATTEMPTS) {
-        setOrderIds(result.order_ids)
-        setStatus(result.status)
-        if (result.status === "succeeded" || result.status === "canceled") forgetPayment()
+      setOrderIds(result.order_ids)
+
+      if (result.status === "succeeded") {
+        forgetPayment()
+        setView("paid")
         return
       }
-
-      await new Promise((resolve) => setTimeout(resolve, POLL_DELAY_MS))
+      if (result.status === "none") {
+        setView("empty")
+        return
+      }
+      // pending/canceled — оплата не завершена. Ещё разок подождём успех,
+      // потом показываем «не завершено».
+      if (attempt >= EXTRA_CHECKS) {
+        forgetPayment()
+        setView("unpaid")
+        return
+      }
+      await new Promise((r) => setTimeout(r, CHECK_DELAY_MS))
       if (!alive.current) return
     }
   }, [])
@@ -65,10 +70,7 @@ export default function PaymentResultPage() {
   }, [check])
 
   async function retry() {
-    if (!orderIds.length) {
-      router.push("/cart")
-      return
-    }
+    if (!orderIds.length) return
     setRetrying(true)
     try {
       await startPayment(orderIds)
@@ -94,22 +96,22 @@ export default function PaymentResultPage() {
           </div>
 
           <CardContent className="relative py-12 text-center">
-            {status === "checking" && (
+            {view === "checking" && (
               <>
                 <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-muted">
                   <Loader2 className="h-7 w-7 animate-spin text-primary" aria-hidden />
                 </div>
                 <h1 className="mb-1 text-xl font-bold">Проверяем оплату</h1>
-                <p className="text-sm text-muted-foreground">Это займёт несколько секунд</p>
+                <p className="text-sm text-muted-foreground">Это займёт пару секунд</p>
               </>
             )}
 
-            {status === "succeeded" && (
+            {view === "paid" && (
               <>
                 <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-[var(--brand-dark)] text-white shadow-brand">
                   <CheckCircle2 className="h-8 w-8" aria-hidden />
                 </div>
-                <h1 className="mb-1 text-xl font-bold">Оплата прошла</h1>
+                <h1 className="mb-1 text-xl font-bold">Оплачено</h1>
                 <p className="mb-6 text-sm text-muted-foreground">
                   {orderIds.length === 1
                     ? `Заказ #${orderIds[0]} оплачен.`
@@ -136,21 +138,21 @@ export default function PaymentResultPage() {
               </>
             )}
 
-            {status === "canceled" && (
+            {view === "unpaid" && (
               <>
-                <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-destructive/10 text-destructive">
-                  <XCircle className="h-8 w-8" aria-hidden />
+                <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-secondary/40 text-primary">
+                  <Clock className="h-8 w-8" aria-hidden />
                 </div>
-                <h1 className="mb-1 text-xl font-bold">Оплата не прошла</h1>
+                <h1 className="mb-1 text-xl font-bold">Оплата не завершена</h1>
                 <p className="mb-6 text-sm text-muted-foreground">
-                  Платёж отменён или не был завершён. Деньги не списаны,
-                  {orderIds.length ? " заказы вернулись в корзину" : " заказы остались в корзине"} —
-                  можно попробовать снова.
+                  Деньги не списаны.{" "}
+                  {orderIds.length === 1 ? "Заказ" : "Заказы"} ожидает оплаты — можно оплатить
+                  сейчас или вернуться к этому позже в «Моих заказах».
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
                   <Button
                     onClick={retry}
-                    disabled={retrying}
+                    disabled={retrying || !orderIds.length}
                     className="btn-shine w-full rounded-full px-6 sm:w-auto"
                   >
                     {retrying ? (
@@ -158,33 +160,7 @@ export default function PaymentResultPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Повторить оплату
-                  </Button>
-                  <Link href="/cart">
-                    <Button variant="outline" className="w-full rounded-full px-6 sm:w-auto">
-                      <ShoppingCart className="mr-2 h-4 w-4" /> В корзину
-                    </Button>
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {status === "pending" && (
-              <>
-                <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-muted">
-                  <Loader2 className="h-7 w-7 animate-spin text-primary" aria-hidden />
-                </div>
-                <h1 className="mb-1 text-xl font-bold">Платёж обрабатывается</h1>
-                <p className="mb-6 text-sm text-muted-foreground">
-                  Банк ещё не подтвердил оплату. Как только деньги поступят, заказ станет
-                  оплаченным, а стикеры придут на почту — это может занять несколько минут.
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-                  <Button
-                    onClick={check}
-                    className="w-full rounded-full px-6 sm:w-auto"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" /> Проверить ещё раз
+                    Оплатить
                   </Button>
                   <Link href="/orders/active">
                     <Button variant="outline" className="w-full rounded-full px-6 sm:w-auto">
@@ -195,7 +171,7 @@ export default function PaymentResultPage() {
               </>
             )}
 
-            {status === "none" && (
+            {view === "empty" && (
               <>
                 <div className="mx-auto mb-5 grid size-16 place-items-center rounded-2xl bg-muted text-muted-foreground">
                   <ShoppingCart className="h-7 w-7" aria-hidden />

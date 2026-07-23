@@ -12,7 +12,6 @@ export interface PaymentSyncResult {
   status: PaymentStatus
   order_ids: number[]
   paid_order_ids: number[]
-  released_order_ids: number[]
 }
 
 /** Ключ sessionStorage с id последнего платежа. */
